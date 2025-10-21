@@ -9,8 +9,7 @@ const LowerThird = ({
   position = "bottom-left",
   visible = true,
   lowerThirdMode = "text",
-  lowerThirdVideoSrc = "",
-  lowerThirdVideoLoop = false
+  lowerThirdVideoSrc = ""
 }) => {
   // Internal phase to orchestrate enter/exit animation without snapping the container
   // Phases: hidden -> entering -> active -> exiting -> hidden
@@ -62,9 +61,6 @@ const LowerThird = ({
     const element = videoRef.current;
     if (!element) return;
     if (visible && hasVideoSrc) {
-      if (!lowerThirdVideoLoop && (element.ended || element.currentTime >= element.duration)) {
-        element.currentTime = 0;
-      }
       const playPromise = element.play();
       if (playPromise?.catch) {
         playPromise.catch(() => {
@@ -74,14 +70,7 @@ const LowerThird = ({
     } else {
       element.pause();
     }
-  }, [visible, wantsVideo, hasVideoSrc, lowerThirdVideoSrc, lowerThirdVideoLoop]);
-
-  useEffect(() => {
-    if (!wantsVideo) return;
-    const element = videoRef.current;
-    if (!element) return;
-    element.loop = Boolean(lowerThirdVideoLoop);
-  }, [wantsVideo, lowerThirdVideoLoop]);
+  }, [visible, wantsVideo, hasVideoSrc, lowerThirdVideoSrc]);
 
   if (wantsVideo && !hasVideoSrc) {
     return null;
@@ -129,8 +118,7 @@ const LowerThird = ({
           ref={videoRef}
           src={lowerThirdVideoSrc}
           autoPlay
-          loop={Boolean(lowerThirdVideoLoop)}
-          muted
+          loop={false}
           playsInline
           preload="auto"
         />
@@ -152,8 +140,7 @@ LowerThird.propTypes = {
   ]),
   visible: PropTypes.bool,
   lowerThirdMode: PropTypes.oneOf(["text", "video"]),
-  lowerThirdVideoSrc: PropTypes.string,
-  lowerThirdVideoLoop: PropTypes.bool
+  lowerThirdVideoSrc: PropTypes.string
 };
 
 export default LowerThird;

@@ -14,6 +14,7 @@ KeyCast Lower Thirds is an Electron + React control surface for driving broadcas
 - **Chroma-ready background**: choose any key color (default neon green) for OBS/ATEM chroma workflows.
 - **Output manager**: start/stop the kiosk window from the control panel and lock it to any detected display.
 - **Flexible lower thirds**: switch between text banners and video clips, with optional loop control, without leaving the tab.
+- **Fullscreen video cues**: build a playlist of stingers, pick one, press play, and it will fade out automatically at the end.
 - **Animated logos**: loop or play-once alpha video (WebM/MP4/MOV) or transparent GIF/APNG overlays with positional controls.
 - **Quick styling presets**: one-click News, Event, and Alert palettes to keep operators moving fast.
 
@@ -54,6 +55,12 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 ![Lower Third Designer](docs/screens/lower-third-tab.png)
 *Two-column editor for primary/secondary titles, chroma palettes, placement, and visibility toggle.*
 
+![Lower Third Video Designer](docs/screens/lower-thirds-video.png)
+*Video-mode controls showing clip picker, loop toggle, and placement options for broadcast stingers.*
+
+![Fullscreen Video Player](docs/screens/videos-tab.png)
+*Playlist view for full-frame videos with add/remove controls, play trigger, and live status badges.*
+
 ![Logo Manager](docs/screens/logo-tab.png)
 *Animated preview, loop controls, and hot-swap logo tooling.*
 
@@ -76,6 +83,13 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Logo video playback**: when a video logo is loaded, choose loop vs play-once directly from here.
 - **Visibility toggle**: instantly fade lower third in/out without killing the kiosk.
 - **Quick themes**: apply curated color sets for News, Event, and Alert packages.
+
+### Videos Tab
+
+- **Playlist builder**: add one or more full-frame clips (WebM/MP4/MOV/MKV) to drive show openers, sponsor spots, or bumpers.
+- **Quick select**: highlight one clip at a time, see which one is live, and remove items you no longer need.
+- **Single-click playback**: hit play and the chosen clip fills the output; it automatically fades down at the end.
+- **Manual fade**: trigger an early fade out with a single button if you need to cut back sooner.
 
 ### Logo Tab
 

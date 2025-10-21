@@ -1,6 +1,113 @@
 import PropTypes from "prop-types";
+import { useEffect, useMemo, useRef, useState } from "react";
 import LowerThird from "./LowerThird.jsx";
 import AnimatedLogo from "./AnimatedLogo.jsx";
+
+const FullscreenVideoOverlay = ({ state }) => {
+  const {
+    fullscreenVideos = [],
+    fullscreenVideoActiveId,
+    fullscreenVideoVisible,
+    fullscreenVideoTrigger = 0,
+    fullscreenVideoFadeMs = 600
+  } = state;
+
+  const activeClip = useMemo(
+    () => fullscreenVideos.find((item) => item.id === fullscreenVideoActiveId),
+    [fullscreenVideos, fullscreenVideoActiveId]
+  );
+
+  const [phase, setPhase] = useState("hidden");
+  const exitTimerRef = useRef(null);
+  const fadeDuration = Math.max(100, Number(fullscreenVideoFadeMs) || 600);
+
+  useEffect(() => {
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+
+    if (!activeClip) {
+      setPhase("hidden");
+      return () => {};
+    }
+
+    if (fullscreenVideoVisible) {
+      setPhase("visible");
+      return () => {};
+    }
+
+    if (phase !== "hidden") {
+      setPhase("exiting");
+      exitTimerRef.current = setTimeout(() => {
+        setPhase("hidden");
+        exitTimerRef.current = null;
+      }, fadeDuration);
+    }
+
+    return () => {
+      if (exitTimerRef.current) {
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
+  }, [activeClip, fullscreenVideoVisible, fadeDuration, phase, fullscreenVideoTrigger]);
+
+  const handleVideoEnded = () => {
+    const patch = {
+      fullscreenVideoVisible: false,
+      fullscreenVideoPlaying: false
+    };
+    window?.electronAPI?.updateLowerThird?.(patch);
+  };
+
+  const phaseClassName =
+    phase === "visible"
+      ? "fullscreen-video is-visible"
+      : phase === "exiting"
+        ? "fullscreen-video is-visible is-exiting"
+        : "fullscreen-video";
+
+  if (!activeClip || phase === "hidden") {
+    return null;
+  }
+
+  return (
+    <div
+      className={phaseClassName}
+      style={{ "--fullscreen-fade": `${fadeDuration}ms` }}
+    >
+      <video
+        key={`${activeClip.id}-${fullscreenVideoTrigger}`}
+        src={activeClip.src}
+        autoPlay
+        playsInline
+        preload="auto"
+        onEnded={handleVideoEnded}
+      />
+    </div>
+  );
+};
+
+FullscreenVideoOverlay.propTypes = {
+  state: PropTypes.shape({
+    fullscreenVideos: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string,
+        src: PropTypes.string.isRequired
+      })
+    ),
+    fullscreenVideoActiveId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.oneOf([null])
+    ]),
+    fullscreenVideoVisible: PropTypes.bool,
+    fullscreenVideoPlaying: PropTypes.bool,
+    fullscreenVideoTrigger: PropTypes.number,
+    fullscreenVideoFadeMs: PropTypes.number
+  }).isRequired
+};
 
 const DisplaySurface = ({ state }) => {
   const backgroundColor = state.backgroundColor || "#000000";
@@ -17,6 +124,7 @@ const DisplaySurface = ({ state }) => {
         enabled={state.logoEnabled}
         loop={state.logoLoop ?? true}
       />
+      <FullscreenVideoOverlay state={state} />
     </div>
   );
 };
@@ -36,6 +144,19 @@ DisplaySurface.propTypes = {
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,
     logoLoop: PropTypes.bool,
+    fullscreenVideos: PropTypes.array,
+    fullscreenVideoSelectedId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.oneOf([null])
+    ]),
+    fullscreenVideoActiveId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.oneOf([null])
+    ]),
+    fullscreenVideoVisible: PropTypes.bool,
+    fullscreenVideoPlaying: PropTypes.bool,
+    fullscreenVideoTrigger: PropTypes.number,
+    fullscreenVideoFadeMs: PropTypes.number,
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string

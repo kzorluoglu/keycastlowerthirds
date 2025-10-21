@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   stopOutput: () => ipcRenderer.invoke("output:stop"),
   chooseLogoFile: () => ipcRenderer.invoke("logo:pick"),
   chooseLowerThirdVideo: () => ipcRenderer.invoke("lowerThirdVideo:pick"),
+  chooseFullscreenVideos: () => ipcRenderer.invoke("fullscreenVideo:pick"),
   onLowerThirdUpdate: (callback) => {
     if (typeof callback !== "function") return;
     const listener = (_event, state) => callback(state);

@@ -4,6 +4,13 @@ import AnimatedLogo from "./AnimatedLogo.jsx";
 
 const VIDEO_EXTENSIONS = ["webm", "mp4", "mov"];
 
+const createId = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 const isVideoSource = (src) => {
   if (!src) return false;
   const [base, query = ""] = src.split("?");
@@ -30,6 +37,7 @@ const presetThemes = {
 
 const tabs = [
   { id: "lowerthird", label: "Lower Third" },
+  { id: "videos", label: "Videos" },
   { id: "logo", label: "Logo" },
   { id: "system", label: "System" }
 ];
@@ -45,6 +53,16 @@ const ControlPanel = ({
 }) => {
   const logoIsVideo = useMemo(() => isVideoSource(state.logoSrc), [state.logoSrc]);
   const lowerThirdIsVideo = state.lowerThirdMode === "video";
+  const fullscreenVideos = state.fullscreenVideos ?? [];
+  const selectedFullscreenVideo = useMemo(
+    () => fullscreenVideos.find((item) => item.id === state.fullscreenVideoSelectedId) || null,
+    [fullscreenVideos, state.fullscreenVideoSelectedId]
+  );
+  const activeFullscreenVideo = useMemo(
+    () => fullscreenVideos.find((item) => item.id === state.fullscreenVideoActiveId) || null,
+    [fullscreenVideos, state.fullscreenVideoActiveId]
+  );
+  const fullscreenVideoIsLive = Boolean(state.fullscreenVideoVisible);
   const [activeTab, setActiveTab] = useState(tabs[0].id);
 
   const applyPatch = (patch) => {
@@ -103,6 +121,66 @@ const ControlPanel = ({
       lowerThirdVideoSrc: "",
       lowerThirdMode: "text",
       lowerThirdVideoLoop: state.lowerThirdVideoLoop ?? false
+    });
+  };
+
+  const handleAddFullscreenVideos = async () => {
+    try {
+      const clips = await window?.electronAPI?.chooseFullscreenVideos?.();
+      if (!clips || clips.length === 0) return;
+      const newItems = clips.map((clip) => ({
+        id: createId(),
+        name: clip.name || "Untitled Clip",
+        src: clip.src
+      }));
+      const merged = [...fullscreenVideos, ...newItems];
+      const nextSelected = state.fullscreenVideoSelectedId ?? newItems[0]?.id ?? null;
+      applyPatch({
+        fullscreenVideos: merged,
+        fullscreenVideoSelectedId: nextSelected
+      });
+    } catch (error) {
+      console.warn("Fullscreen video selection failed", error);
+    }
+  };
+
+  const handleSelectFullscreenVideo = (clipId) => {
+    applyPatch({ fullscreenVideoSelectedId: clipId });
+  };
+
+  const handleRemoveFullscreenVideo = (clipId) => {
+    if (!clipId) return;
+    const filtered = fullscreenVideos.filter((item) => item.id !== clipId);
+    const nextSelected = filtered.length ? filtered[0].id : null;
+    const patch = {
+      fullscreenVideos: filtered,
+      fullscreenVideoSelectedId: clipId === state.fullscreenVideoSelectedId ? nextSelected : state.fullscreenVideoSelectedId
+    };
+    if (state.fullscreenVideoActiveId === clipId) {
+      patch.fullscreenVideoVisible = false;
+      patch.fullscreenVideoPlaying = false;
+      patch.fullscreenVideoActiveId = nextSelected;
+    }
+    applyPatch(patch);
+  };
+
+  const handlePlayFullscreenVideo = () => {
+    if (!state.fullscreenVideoSelectedId) return;
+    const clip = fullscreenVideos.find((item) => item.id === state.fullscreenVideoSelectedId);
+    if (!clip) return;
+    const trigger = (state.fullscreenVideoTrigger ?? 0) + 1;
+    applyPatch({
+      fullscreenVideoActiveId: clip.id,
+      fullscreenVideoVisible: true,
+      fullscreenVideoPlaying: true,
+      fullscreenVideoTrigger: trigger
+    });
+  };
+
+  const handleFadeOutFullscreenVideo = () => {
+    applyPatch({
+      fullscreenVideoVisible: false,
+      fullscreenVideoPlaying: false
     });
   };
 
@@ -337,6 +415,98 @@ const ControlPanel = ({
               </div>
             )}
 
+            {activeTab === "videos" && (
+              <div className="panel-group">
+                <section className="control-panel__section">
+                  <h2 className="section-title">Fullscreen Video Player</h2>
+                  <p className="section-helper">
+                    Build a playlist of clips to take the output full screen. Each video fades out automatically at the end.
+                  </p>
+                  <div className="video-playlist__actions">
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={handleAddFullscreenVideos}
+                    >
+                      Add Clips
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={() => handleRemoveFullscreenVideo(state.fullscreenVideoSelectedId)}
+                      disabled={!state.fullscreenVideoSelectedId}
+                    >
+                      Remove Selected
+                    </button>
+                  </div>
+
+                  {fullscreenVideos.length === 0 ? (
+                    <p className="video-playlist__empty">No clips yet. Add one to get started.</p>
+                  ) : (
+                    <ul className="video-list" role="listbox">
+                      {fullscreenVideos.map((clip) => {
+                        const isSelected = clip.id === state.fullscreenVideoSelectedId;
+                        const isLive = fullscreenVideoIsLive && clip.id === state.fullscreenVideoActiveId;
+                        const itemClass = [
+                          "video-list__item",
+                          isSelected ? "is-selected" : "",
+                          isLive ? "is-live" : ""
+                        ]
+                          .filter(Boolean)
+                          .join(" ");
+                        return (
+                          <li key={clip.id} className={itemClass}>
+                            <label className="video-list__label">
+                              <input
+                                type="radio"
+                                name="fullscreenVideo"
+                                checked={isSelected}
+                                onChange={() => handleSelectFullscreenVideo(clip.id)}
+                              />
+                              <span className="video-list__name">{clip.name || "Untitled"}</span>
+                              {isLive && <span className="video-list__status">Playing</span>}
+                            </label>
+                            <button
+                              type="button"
+                              className="video-list__remove"
+                              onClick={() => handleRemoveFullscreenVideo(clip.id)}
+                              aria-label={`Remove ${clip.name || "clip"}`}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  <div className="video-playback">
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={handlePlayFullscreenVideo}
+                      disabled={!selectedFullscreenVideo}
+                    >
+                      Play Selected
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={handleFadeOutFullscreenVideo}
+                      disabled={!fullscreenVideoIsLive}
+                    >
+                      Fade Out
+                    </button>
+                  </div>
+                  {activeFullscreenVideo && (
+                    <p className="video-playback__meta">
+                      Last triggered: <strong>{activeFullscreenVideo.name}</strong>
+                    </p>
+                  )}
+                </section>
+              </div>
+            )}
+
             {activeTab === "logo" && (
               <div className="panel-group">
                 <section className="control-panel__section">
@@ -487,6 +657,25 @@ ControlPanel.propTypes = {
     lowerThirdMode: PropTypes.oneOf(["text", "video"]),
     lowerThirdVideoSrc: PropTypes.string,
     lowerThirdVideoLoop: PropTypes.bool,
+    fullscreenVideos: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string,
+        src: PropTypes.string.isRequired
+      })
+    ),
+    fullscreenVideoSelectedId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.oneOf([null])
+    ]),
+    fullscreenVideoActiveId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.oneOf([null])
+    ]),
+    fullscreenVideoVisible: PropTypes.bool,
+    fullscreenVideoPlaying: PropTypes.bool,
+    fullscreenVideoTrigger: PropTypes.number,
+    fullscreenVideoFadeMs: PropTypes.number,
     logoSrc: PropTypes.string,
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,

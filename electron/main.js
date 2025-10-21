@@ -19,6 +19,13 @@ const defaultState = {
   lowerThirdMode: "text",
   lowerThirdVideoSrc: "",
   lowerThirdVideoLoop: false,
+  fullscreenVideos: [],
+  fullscreenVideoSelectedId: null,
+  fullscreenVideoActiveId: null,
+  fullscreenVideoVisible: false,
+  fullscreenVideoPlaying: false,
+  fullscreenVideoTrigger: 0,
+  fullscreenVideoFadeMs: 600,
   logoEnabled: false,
   logoSrc: "",
   logoPosition: "top-right",
@@ -306,6 +313,29 @@ ipcMain.handle("lowerThirdVideo:pick", async () => {
 
   const filePath = result.filePaths[0];
   return createMediaUrl(filePath);
+});
+
+ipcMain.handle("fullscreenVideo:pick", async () => {
+  const result = await dialog.showOpenDialog({
+    title: "Add Fullscreen Videos",
+    buttonLabel: "Add Clip",
+    filters: [
+      {
+        name: "Video",
+        extensions: ["webm", "mp4", "mov", "m4v", "mkv"]
+      }
+    ],
+    properties: ["openFile", "multiSelections"]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return [];
+  }
+
+  return result.filePaths.map((filePath) => ({
+    src: createMediaUrl(filePath),
+    name: path.basename(filePath)
+  }));
 });
 
 ipcMain.handle("output:start", () => {

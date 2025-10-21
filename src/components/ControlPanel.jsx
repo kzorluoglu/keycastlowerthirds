@@ -1,7 +1,17 @@
 import PropTypes from "prop-types";
 import { useMemo, useState } from "react";
-import LowerThird from "./LowerThird.jsx";
 import AnimatedLogo from "./AnimatedLogo.jsx";
+
+const VIDEO_EXTENSIONS = ["webm", "mp4", "mov"];
+
+const isVideoSource = (src) => {
+  if (!src) return false;
+  const [base, query = ""] = src.split("?");
+  const params = new URLSearchParams(query);
+  const extFromQuery = params.get("ext");
+  const extension = (extFromQuery || base.split(".").pop() || "").toLowerCase();
+  return extension ? VIDEO_EXTENSIONS.includes(extension) : false;
+};
 
 const presetThemes = {
   news: {
@@ -33,12 +43,8 @@ const ControlPanel = ({
   onOutputStop,
   outputBusy
 }) => {
-  const previewState = useMemo(
-    () => ({
-      ...state
-    }),
-    [state]
-  );
+  const logoIsVideo = useMemo(() => isVideoSource(state.logoSrc), [state.logoSrc]);
+  const lowerThirdIsVideo = state.lowerThirdMode === "video";
   const [activeTab, setActiveTab] = useState(tabs[0].id);
 
   const applyPatch = (patch) => {
@@ -68,7 +74,35 @@ const ControlPanel = ({
   const handleLogoClear = () => {
     applyPatch({
       logoSrc: "",
-      logoEnabled: false
+      logoEnabled: false,
+      logoLoop: true
+    });
+  };
+
+  const handleLowerThirdModeChange = (event) => {
+    const nextMode = event.target.value;
+    applyPatch({ lowerThirdMode: nextMode });
+  };
+
+  const handleLowerThirdVideoBrowse = async () => {
+    try {
+      const fileUrl = await window?.electronAPI?.chooseLowerThirdVideo?.();
+      if (!fileUrl) return;
+      applyPatch({
+        lowerThirdMode: "video",
+        lowerThirdVideoSrc: fileUrl,
+        lowerThirdVideoLoop: state.lowerThirdVideoLoop ?? false
+      });
+    } catch (error) {
+      console.warn("Lower third video selection failed", error);
+    }
+  };
+
+  const handleLowerThirdVideoClear = () => {
+    applyPatch({
+      lowerThirdVideoSrc: "",
+      lowerThirdMode: "text",
+      lowerThirdVideoLoop: state.lowerThirdVideoLoop ?? false
     });
   };
 
@@ -127,50 +161,114 @@ const ControlPanel = ({
               <div className="panel-group">
                 <section className="control-panel__section control-panel__section--grid">
                   <label className="field">
-                    <span className="field__label">Primary Title</span>
-                    <input
+                    <span className="field__label">Lower Third Content</span>
+                    <select
                       className="field__input"
-                      type="text"
-                      value={state.primaryText}
-                      onChange={(event) =>
-                        applyPatch({ primaryText: event.target.value })
-                      }
-                      placeholder="e.g. Live from the newsroom"
-                    />
+                      value={state.lowerThirdMode || "text"}
+                      onChange={handleLowerThirdModeChange}
+                    >
+                      <option value="text">Text Banner</option>
+                      <option value="video">Video Clip</option>
+                    </select>
                   </label>
 
-                  <label className="field">
-                    <span className="field__label">Secondary Title</span>
-                    <input
-                      className="field__input"
-                      type="text"
-                      value={state.secondaryText}
-                      onChange={(event) =>
-                        applyPatch({ secondaryText: event.target.value })
-                      }
-                      placeholder="e.g. Updates every hour"
-                    />
-                  </label>
+                  {!lowerThirdIsVideo && (
+                    <>
+                      <label className="field">
+                        <span className="field__label">Primary Title</span>
+                        <input
+                          className="field__input"
+                          type="text"
+                          value={state.primaryText}
+                          onChange={(event) =>
+                            applyPatch({ primaryText: event.target.value })
+                          }
+                          placeholder="e.g. Live from the newsroom"
+                        />
+                      </label>
 
-                  <div className="field field--inline">
-                    <span className="field__label">Primary Background</span>
-                    <input
-                      type="color"
-                      value={state.primaryBg}
-                      onChange={(event) => applyPatch({ primaryBg: event.target.value })}
-                    />
-                  </div>
+                      <label className="field">
+                        <span className="field__label">Secondary Title</span>
+                        <input
+                          className="field__input"
+                          type="text"
+                          value={state.secondaryText}
+                          onChange={(event) =>
+                            applyPatch({ secondaryText: event.target.value })
+                          }
+                          placeholder="e.g. Updates every hour"
+                        />
+                      </label>
 
-                  <div className="field field--inline">
-                    <span className="field__label">Secondary Background</span>
-                    <input
-                      type="color"
-                      value={state.secondaryBg}
-                      onChange={(event) =>
-                        applyPatch({ secondaryBg: event.target.value })
-                      }
-                    />
-                  </div>
+                      <div className="field field--inline">
+                        <span className="field__label">Primary Background</span>
+                        <input
+                          type="color"
+                          value={state.primaryBg}
+                          onChange={(event) =>
+                            applyPatch({ primaryBg: event.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="field field--inline">
+                        <span className="field__label">Secondary Background</span>
+                        <input
+                          type="color"
+                          value={state.secondaryBg}
+                          onChange={(event) =>
+                            applyPatch({ secondaryBg: event.target.value })
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {lowerThirdIsVideo && (
+                    <div className="field">
+                      <span className="field__label">Video Clip</span>
+                      <div className="logo-controls">
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={handleLowerThirdVideoBrowse}
+                        >
+                          {state.lowerThirdVideoSrc ? "Change Clip" : "Select Clip"}
+                        </button>
+                        {state.lowerThirdVideoSrc && (
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            onClick={handleLowerThirdVideoClear}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      {state.lowerThirdVideoSrc && (
+                        <p className="section-helper">
+                          Video plays in kiosk output with audio muted.
+                        </p>
+                      )}
+                      {state.lowerThirdVideoSrc && (
+                        <label className="field">
+                          <span className="field__label">Loop Clip</span>
+                          <select
+                            className="field__input"
+                            value={state.lowerThirdVideoLoop ? "yes" : "no"}
+                            onChange={(event) =>
+                              applyPatch({
+                                lowerThirdVideoLoop: event.target.value === "yes"
+                              })
+                            }
+                          >
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  )}
 
                   <label className="field">
                     <span className="field__label">Placement</span>
@@ -185,6 +283,22 @@ const ControlPanel = ({
                       <option value="top-right">Top Right</option>
                     </select>
                   </label>
+
+                  {logoIsVideo && (
+                    <label className="field">
+                      <span className="field__label">Logo Video Playback</span>
+                      <select
+                        className="field__input"
+                        value={state.logoLoop === false ? "once" : "loop"}
+                        onChange={(event) =>
+                          applyPatch({ logoLoop: event.target.value === "loop" })
+                        }
+                      >
+                        <option value="loop">Loop Continuously</option>
+                        <option value="once">Play Once</option>
+                      </select>
+                    </label>
+                  )}
 
                   <button
                     type="button"
@@ -256,6 +370,7 @@ const ControlPanel = ({
                           src={state.logoSrc}
                           position={state.logoPosition}
                           enabled
+                          loop={state.logoLoop ?? true}
                         />
                       </div>
                     </div>
@@ -276,6 +391,7 @@ const ControlPanel = ({
                       <option value="bottom-right">Bottom Right</option>
                     </select>
                   </label>
+
                   <button
                     type="button"
                     className={`toggle-button ${state.logoEnabled ? "is-active" : ""}`}
@@ -355,20 +471,6 @@ const ControlPanel = ({
           </div>
         </div>
 
-        <section className="control-panel__section control-panel__preview">
-          <h2>Live Preview</h2>
-          <div
-            className="preview-frame"
-            style={{ backgroundColor: previewState.backgroundColor || "#000000" }}
-          >
-            <LowerThird {...previewState} />
-            <AnimatedLogo
-              src={previewState.logoSrc}
-              position={previewState.logoPosition}
-              enabled={previewState.logoEnabled}
-            />
-          </div>
-        </section>
       </div>
     </div>
   );
@@ -382,9 +484,13 @@ ControlPanel.propTypes = {
     secondaryBg: PropTypes.string,
     position: PropTypes.string,
     visible: PropTypes.bool,
+    lowerThirdMode: PropTypes.oneOf(["text", "video"]),
+    lowerThirdVideoSrc: PropTypes.string,
+    lowerThirdVideoLoop: PropTypes.bool,
     logoSrc: PropTypes.string,
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,
+    logoLoop: PropTypes.bool,
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string

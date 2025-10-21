@@ -371,38 +371,6 @@ body {
   border-color: transparent;
 }
 
-.control-panel__preview h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 1rem;
-  color: #bfbfda;
-}
-
-.preview-frame {
-  position: relative;
-  width: 100%;
-  padding-top: 45%;
-  border-radius: 10px;
-  border: 1px solid #202032;
-  background: radial-gradient(circle at top left, #151526, #0d0d19 60%);
-  overflow: hidden;
-}
-
-.preview-frame .lower-third {
-  transform: scale(0.7);
-  transform-origin: bottom left;
-}
-
-.preview-frame .animated-logo {
-  transform: scale(0.7);
-  transform-origin: top left;
-}
-
-.control-panel__preview {
-  min-width: 220px;
-  flex: 0 0 220px;
-}
-
 .output-status {
   display: flex;
   align-items: center;
@@ -494,6 +462,7 @@ body {
   min-width: 320px;
   max-width: clamp(320px, 40vw, 640px);
   box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 250ms ease;
 }
 
 .lower-third__primary,
@@ -513,7 +482,8 @@ body {
   font-size: 1.05rem;
   font-weight: 500;
   letter-spacing: 0.03em;
-  background: rgba(0, 0, 0, 0.2);
+  /* overlay handled via ::after to sync with bg fill */
+  background: transparent;
 }
 
 .lower-third--bottom-left {
@@ -550,6 +520,154 @@ body {
 .lower-third.is-visible.lower-third--top-right {
   transform: translateX(0) translateY(0);
   opacity: 1;
+}
+
+/* Simple hide: fade the whole container on exit */
+.lower-third.is-exiting {
+  opacity: 0;
+}
+
+/* Ensure shadow does not linger when offstage or during exit */
+.lower-third:not(.is-visible) .lower-third__banner {
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0);
+}
+
+/* During exit, keep shadow; it fades with container opacity */
+.lower-third.is-exiting .lower-third__banner {
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+}
+
+.lower-third--video .lower-third__video {
+  display: inline-flex;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: clamp(320px, 40vw, 640px);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.lower-third--video .lower-third__video video {
+  display: block;
+  width: clamp(320px, 40vw, 640px);
+  height: auto;
+}
+
+/* --- Lower Third staged animations (background roll + text) --- */
+.lower-third__primary,
+.lower-third__secondary {
+  position: relative;
+  overflow: hidden;
+}
+
+.lower-third__primary::before,
+.lower-third__secondary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--bg, #666);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* secondary row subtle dark overlay, tied to same fill */
+.lower-third__secondary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.lower-third__text {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  transform: translateX(-12px);
+  opacity: 0;
+}
+
+/* When fully active (post-enter), ensure filled and text visible */
+.lower-third.is-active .lower-third__primary::before,
+.lower-third.is-active .lower-third__secondary::before,
+.lower-third.is-active .lower-third__secondary::after {
+  transform: scaleX(1);
+}
+
+.lower-third.is-active .lower-third__text {
+  transform: none;
+  opacity: 1;
+}
+
+@keyframes lt-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes lt-empty {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes lt-text-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes lt-text-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/* Enter sequence: primary bg -> secondary bg -> text */
+.lower-third.is-entering .lower-third__primary::before {
+  animation: lt-fill 400ms ease forwards;
+}
+
+.lower-third.is-entering .lower-third__secondary::before,
+.lower-third.is-entering .lower-third__secondary::after {
+  animation: lt-fill 400ms ease forwards;
+  animation-delay: 150ms;
+}
+
+.lower-third.is-entering .lower-third__text {
+  animation: lt-text-in 300ms ease forwards;
+  animation-delay: 600ms;
+}
+
+/* Exit sequence: text -> secondary bg -> primary bg */
+/* Cancel any per-row exit animations; keep backgrounds as-is while fading */
+.lower-third.is-exiting .lower-third__primary::before,
+.lower-third.is-exiting .lower-third__secondary::before,
+.lower-third.is-exiting .lower-third__secondary::after {
+  animation: none !important;
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.lower-third.is-exiting .lower-third__text {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
 }
 
 @media (max-width: 720px) {

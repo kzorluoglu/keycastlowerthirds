@@ -16,9 +16,13 @@ const defaultState = {
   secondaryBg: "#252A34",
   position: "bottom-left",
   visible: false,
+  lowerThirdMode: "text",
+  lowerThirdVideoSrc: "",
+  lowerThirdVideoLoop: false,
   logoEnabled: false,
   logoSrc: "",
   logoPosition: "top-right",
+  logoLoop: true,
   displayId: null,
   outputActive: false,
   backgroundColor: "#00FF00"
@@ -270,6 +274,27 @@ ipcMain.handle("logo:pick", async () => {
       {
         name: "Media",
         extensions: ["webm", "mp4", "mov", "gif", "apng", "png"]
+      }
+    ],
+    properties: ["openFile"]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  const filePath = result.filePaths[0];
+  return createMediaUrl(filePath);
+});
+
+ipcMain.handle("lowerThirdVideo:pick", async () => {
+  const result = await dialog.showOpenDialog({
+    title: "Select Lower Third Video",
+    buttonLabel: "Use Clip",
+    filters: [
+      {
+        name: "Video",
+        extensions: ["webm", "mp4", "mov"]
       }
     ],
     properties: ["openFile"]

@@ -9,9 +9,13 @@ const fallbackState = {
   secondaryBg: "#252A34",
   position: "bottom-left",
   visible: false,
+  lowerThirdMode: "text",
+  lowerThirdVideoSrc: "",
+  lowerThirdVideoLoop: false,
   logoEnabled: false,
   logoSrc: "",
   logoPosition: "top-right",
+  logoLoop: true,
   displayId: null,
   outputActive: false,
   backgroundColor: "#00FF00"

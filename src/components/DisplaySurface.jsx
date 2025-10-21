@@ -15,6 +15,7 @@ const DisplaySurface = ({ state }) => {
         src={state.logoSrc}
         position={state.logoPosition}
         enabled={state.logoEnabled}
+        loop={state.logoLoop ?? true}
       />
     </div>
   );
@@ -28,9 +29,13 @@ DisplaySurface.propTypes = {
     secondaryBg: PropTypes.string,
     position: PropTypes.string,
     visible: PropTypes.bool,
+    lowerThirdMode: PropTypes.oneOf(["text", "video"]),
+    lowerThirdVideoSrc: PropTypes.string,
+    lowerThirdVideoLoop: PropTypes.bool,
     logoSrc: PropTypes.string,
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,
+    logoLoop: PropTypes.bool,
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string

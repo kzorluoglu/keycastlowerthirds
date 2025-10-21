@@ -13,7 +13,8 @@ KeyCast Lower Thirds is an Electron + React control surface for driving broadcas
 - **Instant updates**: text, colors, placement, visibility, and animated logos sync live—no reloads.
 - **Chroma-ready background**: choose any key color (default neon green) for OBS/ATEM chroma workflows.
 - **Output manager**: start/stop the kiosk window from the control panel and lock it to any detected display.
-- **Animated logos**: loop alpha video (WebM/MP4/MOV) or transparent GIF/APNG overlays with positional controls.
+- **Flexible lower thirds**: switch between text banners and video clips, with optional loop control, without leaving the tab.
+- **Animated logos**: loop or play-once alpha video (WebM/MP4/MOV) or transparent GIF/APNG overlays with positional controls.
 - **Quick styling presets**: one-click News, Event, and Alert palettes to keep operators moving fast.
 
 ---
@@ -67,15 +68,18 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 
 ### Lower Third Tab
 
+- **Content type**: choose between a text-driven banner or a muted video clip.
+- **Loop clip**: decide whether a selected video lower third repeats or runs once.
 - **Primary / Secondary title**: supports emoji, RTL text, and quick clear.
-- **Background colors**: per-line color pickers with hex entry, displayed live on preview.
+- **Background colors**: per-line color pickers with hex entry; updates push straight to the output surface.
 - **Placement**: top/bottom + left/right corners with animated transitions.
+- **Logo video playback**: when a video logo is loaded, choose loop vs play-once directly from here.
 - **Visibility toggle**: instantly fade lower third in/out without killing the kiosk.
 - **Quick themes**: apply curated color sets for News, Event, and Alert packages.
 
 ### Logo Tab
 
-- **Accepted formats**: GIF, APNG, transparent PNG, WebM/MP4/MOV (muted loop).
+- **Accepted formats**: GIF, APNG, transparent PNG, WebM/MP4/MOV (muted by default).
 - **Positioning**: all four corners; snapping to safe margins.
 - **Show/Hide toggle**: operate independently of the text overlay.
 - **Live preview**: scaled frame inside the control panel plus real kiosk render.

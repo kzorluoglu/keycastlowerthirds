@@ -1,4 +1,4 @@
-# KeyCast Lower Thirds
+﻿# KeyCast Lower Thirds
 
 KeyCast Lower Thirds is an Electron + React control surface for driving broadcast-quality lower thirds with chroma or alpha workflows. It ships with an operator-friendly panel, a kiosk-ready HDMI output, and real-time sync between the two so you can focus on live production instead of fighting graphics software.
 
@@ -73,6 +73,9 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 ![Logo Manager](docs/screens/logo-tab.png)
 *Animated preview, loop controls, and hot-swap logo tooling.*
 
+![Live Sources](docs/screens/live-source.png)
+*Live Sources tab previewing a VDO.Ninja feed and its quick history list.*
+
 ![System Output](docs/screens/system-tab.png)
 *Key color picker, display routing, and kiosk lifecycle controls.*
 
@@ -113,10 +116,9 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Add VDO.Ninja feeds**: paste a `https://vdo.ninja/?view=...` URL and label it for the show rundown.
 - **Preview**: embed the viewer link in the control panel to confirm picture and audio before you take it live.
 - **Take Live**: fades the kiosk to the selected feed and automatically hides fullscreen video cues.
-- **History**: keep a rolling list of previously used links so you can recall them instantly.
+  - **History**: keep a rolling list of previously used links so you can recall them instantly.
 
-### System Tab
-
+  ### System Tab
 - **Key color**: pick the chroma background (defaults to `#00FF00`).  
   - For OBS, add a Window Capture → Chroma Key filter.  
   - For ATEM, feed the fill output and key out the chroma value, or use OBS/vMix as an upstream keyer.
@@ -125,19 +127,18 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 
   
 ## Remote Screen Share Workflow
-## Remote Screen Share Workflow
 
 KeyCast now leans on VDO.Ninja for remote presenters.
 
 1. Ask the remote guest to open **https://vdo.ninja** (or the invite link you generated) and start screen sharing or sending their program feed.
-2. Copy the viewer link that ends with `?view=...` and paste it into the **Live Sources ? Add Source** form.
+2. Copy the viewer link that ends with `?view=...` and paste it into the **Live Sources → Add Source** form.
 3. Use the in-app preview to verify audio/video. When you press **Take Live**, the kiosk window switches to the feed and hides any fullscreen clips.
 4. Any layout you remove is stored in history so you can bring it back with one click.
 
 Tips:
 
 - Append `&transparent=1&control=false` to viewer links for a cleaner, UI-free embed.
-- Your control machine just needs outbound HTTPS to VDO.Ninja�no local signalling server required.
+- Your control machine just needs outbound HTTPS to VDO.Ninja�no local signalling server required.
 - Use the **Hide** button to fade back to your lower third bed while keeping the remote link handy.
 
 

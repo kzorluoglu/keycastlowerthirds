@@ -642,7 +642,7 @@ body {
 .video-playback__meta {
   margin-top: 10px;
   font-size: 0.85rem;
-  color: #9ea0be;
+  color: var(--text-muted);
 }
 
 .toggle-button {
@@ -650,9 +650,9 @@ body {
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid #303047;
-  background: rgba(22, 22, 34, 0.9);
-  color: #ffffff;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-contrast);
+  color: var(--text-primary);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
@@ -681,18 +681,18 @@ body {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.08);
-  color: #d0d0e0;
+  background: rgba(58, 86, 132, 0.32);
+  color: var(--text-primary);
 }
 
 .status-pill.is-on {
-  background: rgba(76, 154, 255, 0.2);
+  background: rgba(76, 154, 255, 0.22);
   color: #4c9aff;
 }
 
 .status-pill.is-off {
-  background: rgba(120, 120, 150, 0.25);
-  color: #8f8fb2;
+  background: rgba(70, 90, 120, 0.26);
+  color: var(--text-muted);
 }
 
 .display-surface {

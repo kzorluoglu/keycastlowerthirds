@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimatedLogo from "./AnimatedLogo.jsx";
 import DisplaySurface from "./DisplaySurface.jsx";
+import RemoteSourcesTab from "./RemoteSourcesTab.jsx";
 
 const VIDEO_EXTENSIONS = ["webm", "mp4", "mov"];
 
@@ -39,6 +40,7 @@ const presetThemes = {
 const tabs = [
   { id: "lowerthird", label: "Lower Third" },
   { id: "videos", label: "Videos" },
+  { id: "sources", label: "Live Sources" },
   { id: "logo", label: "Logo" },
   { id: "system", label: "System" }
 ];
@@ -51,10 +53,10 @@ const ControlPanel = ({
   state,
   onChange,
   displays = [],
-  onDisplayChange,
-  onOutputStart,
-  onOutputStop,
-  outputBusy
+  onDisplayChange = undefined,
+  onOutputStart = undefined,
+  onOutputStop = undefined,
+  outputBusy = false
 }) => {
   const logoIsVideo = useMemo(() => isVideoSource(state.logoSrc), [state.logoSrc]);
   const lowerThirdIsVideo = state.lowerThirdMode === "video";
@@ -69,6 +71,23 @@ const ControlPanel = ({
   );
   const [activeTab, setActiveTab] = useState(tabs[0].id);
   const fullscreenVideoIsLive = Boolean(state.fullscreenVideoVisible);
+  const lowerThirdHistory = Array.isArray(state.lowerThirdHistory) ? state.lowerThirdHistory : [];
+  const lowerThirdHistoryItems = useMemo(
+    () =>
+      [...lowerThirdHistory]
+        .map((entry) => ({ ...entry, savedAt: entry?.savedAt || 0 }))
+        .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))
+        .slice(0, 20),
+    [lowerThirdHistory]
+  );
+  const canSaveLowerThirdHistory = useMemo(() => {
+    if (state.lowerThirdMode === "video") {
+      return Boolean(state.lowerThirdVideoSrc);
+    }
+    const primary = state.primaryText?.trim();
+    const secondary = state.secondaryText?.trim();
+    return Boolean(primary) || Boolean(secondary);
+  }, [state.lowerThirdMode, state.lowerThirdVideoSrc, state.primaryText, state.secondaryText]);
 
   const applyPatch = (patch) => {
     const next = { ...state, ...patch };
@@ -88,6 +107,17 @@ const ControlPanel = ({
   const [previewScale, setPreviewScale] = useState(1);
   const dragStateRef = useRef(null);
   const [draggingTarget, setDraggingTarget] = useState(null);
+  const getVideoLabel = useCallback((src) => {
+    if (!src) return "Video Clip";
+    try {
+      const decoded = decodeURIComponent(src);
+      const parts = decoded.split("/");
+      return parts[parts.length - 1] || decoded;
+    } catch (error) {
+      return src;
+    }
+  }, []);
+
   const previewState = useMemo(() => {
     const next = { ...state };
     const hasTextContent =
@@ -133,6 +163,144 @@ const ControlPanel = ({
 
     return () => observer.disconnect();
   }, []);
+
+  const handleSaveLowerThirdHistory = useCallback(() => {
+    const mode = state.lowerThirdMode;
+    const primary = (state.primaryText || "").trim();
+    const secondary = (state.secondaryText || "").trim();
+    const videoSrc = state.lowerThirdVideoSrc || "";
+
+    if (mode === "video") {
+      if (!videoSrc) return;
+    } else if (!primary && !secondary) {
+      return;
+    }
+
+    const entry = {
+      id: createId(),
+      mode,
+      primaryText: primary,
+      secondaryText: secondary,
+      primaryBg: state.primaryBg,
+      secondaryBg: state.secondaryBg,
+      position: state.position,
+      lowerThirdVideoSrc: mode === "video" ? videoSrc : "",
+      lowerThirdVideoLoop: Boolean(state.lowerThirdVideoLoop),
+      lowerThirdPositionCustomEnabled: Boolean(state.lowerThirdPositionCustomEnabled),
+      lowerThirdPositionOffsetX: state.lowerThirdPositionOffsetX ?? 0,
+      lowerThirdPositionOffsetY: state.lowerThirdPositionOffsetY ?? 0,
+      savedAt: Date.now()
+    };
+
+    const filtered = lowerThirdHistory.filter(
+      (item) =>
+        !(
+          item.mode === entry.mode &&
+          (item.primaryText || "") === entry.primaryText &&
+          (item.secondaryText || "") === entry.secondaryText &&
+          (item.lowerThirdVideoSrc || "") === entry.lowerThirdVideoSrc
+        )
+    );
+
+    applyPatch({
+      lowerThirdHistory: [entry, ...filtered].slice(0, 20)
+    });
+  }, [
+    applyPatch,
+    lowerThirdHistory,
+    state.lowerThirdMode,
+    state.lowerThirdVideoLoop,
+    state.lowerThirdVideoSrc,
+    state.lowerThirdPositionCustomEnabled,
+    state.lowerThirdPositionOffsetX,
+    state.lowerThirdPositionOffsetY,
+    state.position,
+    state.primaryBg,
+    state.primaryText,
+    state.secondaryBg,
+    state.secondaryText
+  ]);
+
+  const handleLoadLowerThirdHistory = useCallback(
+    (entry) => {
+      if (!entry) return;
+      const mode = entry.mode || "text";
+      const prepared = {
+        mode,
+        primaryText: entry.primaryText?.trim() || "",
+        secondaryText: entry.secondaryText?.trim() || "",
+        lowerThirdVideoSrc: entry.lowerThirdVideoSrc || ""
+      };
+      const filtered = lowerThirdHistory.filter(
+        (item) =>
+          !(
+            item.mode === prepared.mode &&
+            (item.primaryText || "") === prepared.primaryText &&
+            (item.secondaryText || "") === prepared.secondaryText &&
+            (item.lowerThirdVideoSrc || "") === prepared.lowerThirdVideoSrc
+          )
+      );
+
+      const updatedHistory = [
+        {
+          ...entry,
+          ...prepared,
+          savedAt: Date.now(),
+          id: entry.id || createId()
+        },
+        ...filtered
+      ].slice(0, 20);
+
+      const patch = {
+        lowerThirdMode: mode,
+        primaryText: prepared.primaryText,
+        secondaryText: prepared.secondaryText,
+        primaryBg: entry.primaryBg ?? state.primaryBg,
+        secondaryBg: entry.secondaryBg ?? state.secondaryBg,
+        position: entry.position ?? state.position,
+        lowerThirdVideoSrc: mode === "video" ? prepared.lowerThirdVideoSrc : "",
+        lowerThirdVideoLoop:
+          mode === "video" ? Boolean(entry.lowerThirdVideoLoop) : state.lowerThirdVideoLoop,
+        lowerThirdPositionCustomEnabled:
+          entry.lowerThirdPositionCustomEnabled ?? state.lowerThirdPositionCustomEnabled,
+        lowerThirdPositionOffsetX:
+          entry.lowerThirdPositionOffsetX ?? state.lowerThirdPositionOffsetX ?? 0,
+        lowerThirdPositionOffsetY:
+          entry.lowerThirdPositionOffsetY ?? state.lowerThirdPositionOffsetY ?? 0,
+        lowerThirdHistory: updatedHistory
+      };
+
+      if (mode !== "video") {
+        patch.lowerThirdVideoSrc = "";
+      }
+
+      applyPatch(patch);
+    },
+    [
+      applyPatch,
+      lowerThirdHistory,
+      state.lowerThirdPositionCustomEnabled,
+      state.lowerThirdPositionOffsetX,
+      state.lowerThirdPositionOffsetY,
+      state.lowerThirdVideoLoop,
+      state.position,
+      state.primaryBg,
+      state.secondaryBg
+    ]
+  );
+
+  const handleRemoveLowerThirdHistory = useCallback(
+    (entryId) => {
+      applyPatch({
+        lowerThirdHistory: lowerThirdHistory.filter((item) => item.id !== entryId)
+      });
+    },
+    [applyPatch, lowerThirdHistory]
+  );
+
+  const handleClearLowerThirdHistory = useCallback(() => {
+    applyPatch({ lowerThirdHistory: [] });
+  }, [applyPatch]);
 
   const startManualDrag = useCallback(
     (target, event) => {
@@ -739,6 +907,17 @@ const ControlPanel = ({
                     </>
                   )}
 
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={handleSaveLowerThirdHistory}
+                      disabled={!canSaveLowerThirdHistory}
+                    >
+                      Save to History
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     className={`toggle-button ${state.visible ? "is-active" : ""}`}
@@ -773,10 +952,74 @@ const ControlPanel = ({
                         );
                       })}
                     </div>
-                  </section>
+                </section>
+              )}
+
+              <section className="control-panel__section">
+                <h2 className="section-title">History</h2>
+                {lowerThirdHistoryItems.length === 0 ? (
+                  <p className="section-helper">
+                    Save lower third layouts to quickly recall previous text or video configurations.
+                  </p>
+                ) : (
+                  <>
+                    <ul className="history-list">
+                      {lowerThirdHistoryItems.map((entry) => {
+                        const isVideoEntry = entry.mode === "video";
+                        const title = isVideoEntry
+                          ? entry.primaryText || "Video Lower Third"
+                          : entry.primaryText || "Lower Third";
+                        const subtitle = isVideoEntry
+                          ? getVideoLabel(entry.lowerThirdVideoSrc)
+                          : entry.secondaryText || "No secondary line";
+                        const timestamp = entry.savedAt
+                          ? new Date(entry.savedAt).toLocaleString()
+                          : "";
+
+                        return (
+                          <li
+                            key={entry.id}
+                            className="history-item"
+                          >
+                            <div className="history-item__meta">
+                              <strong>{title}</strong>
+                              <span>{subtitle}</span>
+                              {timestamp ? (
+                                <span className="history-item__timestamp">{timestamp}</span>
+                              ) : null}
+                            </div>
+                            <div className="history-item__actions">
+                              <button
+                                type="button"
+                                className="button button--compact"
+                                onClick={() => handleLoadLowerThirdHistory(entry)}
+                              >
+                                Load
+                              </button>
+                              <button
+                                type="button"
+                                className="button button--ghost"
+                                onClick={() => handleRemoveLowerThirdHistory(entry.id)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      className="button button--ghost history-clear"
+                      onClick={handleClearLowerThirdHistory}
+                    >
+                      Clear History
+                    </button>
+                  </>
                 )}
-              </div>
-            )}
+              </section>
+            </div>
+          )}
 
 
             {activeTab === "videos" && (
@@ -869,6 +1112,13 @@ const ControlPanel = ({
                   )}
                 </section>
               </div>
+            )}
+
+            {activeTab === "sources" && (
+              <RemoteSourcesTab
+                state={state}
+                applyPatch={applyPatch}
+              />
             )}
 
             {activeTab === "logo" && (
@@ -1159,7 +1409,42 @@ ControlPanel.propTypes = {
     logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
-    backgroundColor: PropTypes.string
+    backgroundColor: PropTypes.string,
+    remoteSources: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        label: PropTypes.string,
+        url: PropTypes.string.isRequired
+      })
+    ),
+    remoteSourceHistory: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        label: PropTypes.string,
+        url: PropTypes.string.isRequired,
+        lastUsedAt: PropTypes.number
+      })
+    ),
+    remoteSourceActiveId: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
+    remoteSourceVisible: PropTypes.bool,
+    remoteSourceTrigger: PropTypes.number,
+    lowerThirdHistory: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        mode: PropTypes.oneOf(["text", "video"]),
+        primaryText: PropTypes.string,
+        secondaryText: PropTypes.string,
+        primaryBg: PropTypes.string,
+        secondaryBg: PropTypes.string,
+        position: PropTypes.string,
+        lowerThirdVideoSrc: PropTypes.string,
+        lowerThirdVideoLoop: PropTypes.bool,
+        lowerThirdPositionCustomEnabled: PropTypes.bool,
+        lowerThirdPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        savedAt: PropTypes.number
+      })
+    )
   }).isRequired,
   displays: PropTypes.arrayOf(
     PropTypes.shape({
@@ -1173,14 +1458,6 @@ ControlPanel.propTypes = {
   onOutputStart: PropTypes.func,
   onOutputStop: PropTypes.func,
   outputBusy: PropTypes.bool
-};
-
-ControlPanel.defaultProps = {
-  displays: [],
-  onDisplayChange: undefined,
-  onOutputStart: undefined,
-  onOutputStop: undefined,
-  outputBusy: false
 };
 
 export default ControlPanel;

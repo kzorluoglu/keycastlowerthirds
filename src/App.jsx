@@ -31,7 +31,13 @@ const fallbackState = {
   logoLoop: true,
   displayId: null,
   outputActive: false,
-  backgroundColor: "#00FF00"
+  backgroundColor: "#00FF00",
+  remoteSources: [],
+  remoteSourceActiveId: null,
+  remoteSourceVisible: false,
+  remoteSourceTrigger: 0,
+  remoteSourceHistory: [],
+  lowerThirdHistory: []
 };
 
 const getMode = () => {

@@ -92,6 +92,7 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Logo video playback**: when a video logo is loaded, choose loop vs play-once directly from here.
 - **Visibility toggle**: instantly fade lower third in/out without killing the kiosk.
 - **Quick themes**: apply curated color sets for News, Event, and Alert packages.
+- **History**: save the current lower third layout (text or video) and restore it later with one click.
 
 ### Videos Tab
 
@@ -107,6 +108,13 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Show/Hide toggle**: operate independently of the text overlay.
 - **Live preview**: scaled frame inside the control panel plus real kiosk render.
 
+### Live Sources Tab
+
+- **Add VDO.Ninja feeds**: paste a `https://vdo.ninja/?view=...` URL and label it for the show rundown.
+- **Preview**: embed the viewer link in the control panel to confirm picture and audio before you take it live.
+- **Take Live**: fades the kiosk to the selected feed and automatically hides fullscreen video cues.
+- **History**: keep a rolling list of previously used links so you can recall them instantly.
+
 ### System Tab
 
 - **Key color**: pick the chroma background (defaults to `#00FF00`).  
@@ -115,9 +123,23 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Display routing**: target any connected monitor/HDMI/SDI adapter.
 - **Output control**: start/stop the kiosk window, monitor status via pill indicator.
 
----
+  
+## Remote Screen Share Workflow
+## Remote Screen Share Workflow
 
-## 🎛️ OBS / ATEM Integration Tips
+KeyCast now leans on VDO.Ninja for remote presenters.
+
+1. Ask the remote guest to open **https://vdo.ninja** (or the invite link you generated) and start screen sharing or sending their program feed.
+2. Copy the viewer link that ends with `?view=...` and paste it into the **Live Sources ? Add Source** form.
+3. Use the in-app preview to verify audio/video. When you press **Take Live**, the kiosk window switches to the feed and hides any fullscreen clips.
+4. Any layout you remove is stored in history so you can bring it back with one click.
+
+Tips:
+
+- Append `&transparent=1&control=false` to viewer links for a cleaner, UI-free embed.
+- Your control machine just needs outbound HTTPS to VDO.Ninja�no local signalling server required.
+- Use the **Hide** button to fade back to your lower third bed while keeping the remote link handy.
+
 
 ### OBS Studio
 

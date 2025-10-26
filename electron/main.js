@@ -8,7 +8,6 @@ const isDev = process.env.NODE_ENV !== "production";
 let controlWindow = null;
 /** @type {BrowserWindow | null} */
 let outputWindow = null;
-
 const defaultState = {
   primaryText: "Live News Update",
   secondaryText: "Breaking details go here",
@@ -32,7 +31,13 @@ const defaultState = {
   logoLoop: true,
   displayId: null,
   outputActive: false,
-  backgroundColor: "#00FF00"
+  backgroundColor: "#00FF00",
+  remoteSources: [],
+  remoteSourceActiveId: null,
+  remoteSourceVisible: false,
+  remoteSourceTrigger: 0,
+  remoteSourceHistory: [],
+  lowerThirdHistory: []
 };
 
 let lowerThirdState = { ...defaultState };
@@ -66,9 +71,9 @@ const resolveUrl = (mode) => {
 
 const createControlWindow = () => {
   controlWindow = new BrowserWindow({
-    width: 1220,
+    width: 1500,
     height: 1000,
-    minWidth: 1220,
+    minWidth: 1500,
     minHeight: 1000,
     title: "Lower Thirds Control",
     webPreferences: {
@@ -248,7 +253,6 @@ app.whenReady().then(() => {
     }
   });
 });
-
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();

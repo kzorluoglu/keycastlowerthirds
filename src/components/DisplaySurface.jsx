@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LowerThird from "./LowerThird.jsx";
 import AnimatedLogo from "./AnimatedLogo.jsx";
+import { buildEmbedUrl } from "../utils/remoteSources.js";
 
 const FullscreenVideoOverlay = ({ state }) => {
   const {
@@ -109,7 +110,59 @@ FullscreenVideoOverlay.propTypes = {
   }).isRequired
 };
 
-const DisplaySurface = ({ state, lowerThirdPreviewControls, logoPreviewControls }) => {
+const RemoteSourceOverlay = ({ state }) => {
+  const {
+    remoteSourceActiveId,
+    remoteSourceVisible,
+    remoteSourceTrigger = 0,
+    remoteSources = []
+  } = state;
+
+  const activeSource = useMemo(
+    () => remoteSources.find((item) => item.id === remoteSourceActiveId) || null,
+    [remoteSourceActiveId, remoteSources]
+  );
+
+  if (!remoteSourceVisible || !activeSource) {
+    return null;
+  }
+
+  const embedUrl = buildEmbedUrl(activeSource.url);
+  const overlayKey = `${activeSource.id}-${remoteSourceTrigger}`;
+
+  return (
+    <div className="remote-source-overlay is-visible">
+      <iframe
+        key={overlayKey}
+        src={embedUrl}
+        title={activeSource.label || "Remote Source"}
+        allow="autoplay; fullscreen; clipboard-read; clipboard-write"
+        allowFullScreen
+      />
+    </div>
+  );
+};
+
+RemoteSourceOverlay.propTypes = {
+  state: PropTypes.shape({
+    remoteSourceActiveId: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
+    remoteSourceVisible: PropTypes.bool,
+    remoteSourceTrigger: PropTypes.number,
+    remoteSources: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        label: PropTypes.string,
+        url: PropTypes.string.isRequired
+      })
+    )
+  }).isRequired
+};
+
+const DisplaySurface = ({
+  state,
+  lowerThirdPreviewControls = undefined,
+  logoPreviewControls = undefined
+}) => {
   const backgroundColor = state.backgroundColor || "#000000";
 
   return (
@@ -117,6 +170,7 @@ const DisplaySurface = ({ state, lowerThirdPreviewControls, logoPreviewControls 
       className="display-surface"
       style={{ backgroundColor }}
     >
+      <RemoteSourceOverlay state={state} />
       <LowerThird
         {...state}
         {...(lowerThirdPreviewControls || {})}
@@ -170,6 +224,16 @@ DisplaySurface.propTypes = {
     fullscreenVideoPlaying: PropTypes.bool,
     fullscreenVideoTrigger: PropTypes.number,
     fullscreenVideoFadeMs: PropTypes.number,
+    remoteSources: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        label: PropTypes.string,
+        url: PropTypes.string.isRequired
+      })
+    ),
+    remoteSourceActiveId: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
+    remoteSourceVisible: PropTypes.bool,
+    remoteSourceTrigger: PropTypes.number,
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string
@@ -190,11 +254,6 @@ DisplaySurface.propTypes = {
     onManualDragEnd: PropTypes.func,
     onManualDragCancel: PropTypes.func
   })
-};
-
-DisplaySurface.defaultProps = {
-  lowerThirdPreviewControls: undefined,
-  logoPreviewControls: undefined
 };
 
 export default DisplaySurface;

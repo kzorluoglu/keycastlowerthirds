@@ -251,7 +251,7 @@ body {
 .preview-panel__helper {
   margin: 0;
   font-size: 0.78rem;
-  color: #7f7f99;
+  color: var(--text-muted);
 }
 
 .control-panel__section {

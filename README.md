@@ -46,6 +46,12 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 
 > Replace the placeholder images below with captures from your environment. Suggested resolutions: 1600×900 for panels, 1920×1080 for kiosk output.
 
+![Preview Screen Grid](docs/screens/preview-screen.png)
+*Pre-show preview window with grid overlay for alignment.*
+
+![Logo & Lower Third Offsets](docs/screens/offset.png)
+*Offset controls for fine-tuning logo and lower third placement.*
+
 ![Control Panel Overview Animation](docs/screens/control_panel.gif)
 *Tab navigation across Lower Third, Logo, and System sections with live preview.*
 

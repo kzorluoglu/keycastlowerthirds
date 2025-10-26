@@ -20,7 +20,10 @@ const AnimatedLogo = ({
   src = "",
   position = "top-right",
   enabled = false,
-  loop = true
+  loop = true,
+  logoPositionCustomEnabled = false,
+  logoPositionOffsetX = 0,
+  logoPositionOffsetY = 0
 }) => {
   const videoRef = useRef(null);
   const type = useMemo(() => inferType(src), [src]);
@@ -69,11 +72,22 @@ const AnimatedLogo = ({
 
   if (!enabled || !src) return null;
 
+  const parseOffset = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const offsetX = parseOffset(logoPositionOffsetX);
+  const offsetY = parseOffset(logoPositionOffsetY);
+
   const className = `animated-logo animated-logo--${position}`;
+  const positionStyle = logoPositionCustomEnabled
+    ? { transform: `translate(${offsetX}px, ${offsetY}px)` }
+    : undefined;
 
   if (type === "video") {
     return (
-      <div className={className}>
+      <div className={className} style={positionStyle}>
         <video
           key={`${src}-${loop ? "loop" : "once"}`}
           ref={videoRef}
@@ -89,7 +103,7 @@ const AnimatedLogo = ({
   }
 
   return (
-    <div className={className}>
+    <div className={className} style={positionStyle}>
       <img src={src} alt="Channel logo" />
     </div>
   );
@@ -104,7 +118,10 @@ AnimatedLogo.propTypes = {
     "top-right"
   ]),
   enabled: PropTypes.bool,
-  loop: PropTypes.bool
+  loop: PropTypes.bool,
+  logoPositionCustomEnabled: PropTypes.bool,
+  logoPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
 };
 
 export default AnimatedLogo;

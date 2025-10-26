@@ -9,7 +9,10 @@ const LowerThird = ({
   position = "bottom-left",
   visible = true,
   lowerThirdMode = "text",
-  lowerThirdVideoSrc = ""
+  lowerThirdVideoSrc = "",
+  lowerThirdPositionCustomEnabled = false,
+  lowerThirdPositionOffsetX = 0,
+  lowerThirdPositionOffsetY = 0
 }) => {
   // Internal phase to orchestrate enter/exit animation without snapping the container
   // Phases: hidden -> entering -> active -> exiting -> hidden
@@ -80,6 +83,7 @@ const LowerThird = ({
   const containerClass = [
     "lower-third",
     `lower-third--${position}`,
+    isVideoMode ? "lower-third--video" : "",
     onStage ? "is-visible" : "",
     localPhase === "entering" ? "is-entering" : "",
     localPhase === "active" ? "is-active" : "",
@@ -88,40 +92,51 @@ const LowerThird = ({
     .filter(Boolean)
     .join(" ");
 
-  if (!isVideoMode) {
-    return (
-      <div className={containerClass}>
-        <div className="lower-third__banner">
-          <span
-            className="lower-third__primary"
-            // pass bg color through a CSS variable for animations
-            style={{ "--bg": primaryBg }}
-          >
-            <span className="lower-third__text">{primaryText || "\u00A0"}</span>
-          </span>
-          <span
-            className="lower-third__secondary"
-            style={{ "--bg": secondaryBg }}
-          >
-            <span className="lower-third__text">{secondaryText || "\u00A0"}</span>
-          </span>
-        </div>
-      </div>
-    );
-  }
+  const parseOffset = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const offsetX = parseOffset(lowerThirdPositionOffsetX);
+  const offsetY = parseOffset(lowerThirdPositionOffsetY);
+  const innerStyle = lowerThirdPositionCustomEnabled
+    ? { transform: `translate(${offsetX}px, ${offsetY}px)` }
+    : undefined;
+
+  const content = !isVideoMode ? (
+    <div className="lower-third__banner">
+      <span
+        className="lower-third__primary"
+        // pass bg color through a CSS variable for animations
+        style={{ "--bg": primaryBg }}
+      >
+        <span className="lower-third__text">{primaryText || "\u00A0"}</span>
+      </span>
+      <span
+        className="lower-third__secondary"
+        style={{ "--bg": secondaryBg }}
+      >
+        <span className="lower-third__text">{secondaryText || "\u00A0"}</span>
+      </span>
+    </div>
+  ) : (
+    <div className="lower-third__video">
+      <video
+        key={`${lowerThirdVideoSrc}`}
+        ref={videoRef}
+        src={lowerThirdVideoSrc}
+        autoPlay
+        loop={false}
+        playsInline
+        preload="auto"
+      />
+    </div>
+  );
 
   return (
-    <div className={`${containerClass} lower-third--video`}>
-      <div className="lower-third__video">
-        <video
-          key={`${lowerThirdVideoSrc}`}
-          ref={videoRef}
-          src={lowerThirdVideoSrc}
-          autoPlay
-          loop={false}
-          playsInline
-          preload="auto"
-        />
+    <div className={containerClass}>
+      <div className="lower-third__inner" style={innerStyle}>
+        {content}
       </div>
     </div>
   );
@@ -140,7 +155,10 @@ LowerThird.propTypes = {
   ]),
   visible: PropTypes.bool,
   lowerThirdMode: PropTypes.oneOf(["text", "video"]),
-  lowerThirdVideoSrc: PropTypes.string
+  lowerThirdVideoSrc: PropTypes.string,
+  lowerThirdPositionCustomEnabled: PropTypes.bool,
+  lowerThirdPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
 };
 
 export default LowerThird;

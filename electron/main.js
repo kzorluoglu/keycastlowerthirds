@@ -66,10 +66,10 @@ const resolveUrl = (mode) => {
 
 const createControlWindow = () => {
   controlWindow = new BrowserWindow({
-    width: 520,
-    height: 820,
-    minWidth: 400,
-    minHeight: 600,
+    width: 1220,
+    height: 1000,
+    minWidth: 1220,
+    minHeight: 1000,
     title: "Lower Thirds Control",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),

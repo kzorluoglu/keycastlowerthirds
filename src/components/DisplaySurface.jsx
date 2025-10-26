@@ -123,6 +123,9 @@ const DisplaySurface = ({ state }) => {
         position={state.logoPosition}
         enabled={state.logoEnabled}
         loop={state.logoLoop ?? true}
+        logoPositionCustomEnabled={state.logoPositionCustomEnabled}
+        logoPositionOffsetX={state.logoPositionOffsetX}
+        logoPositionOffsetY={state.logoPositionOffsetY}
       />
       <FullscreenVideoOverlay state={state} />
     </div>
@@ -140,10 +143,16 @@ DisplaySurface.propTypes = {
     lowerThirdMode: PropTypes.oneOf(["text", "video"]),
     lowerThirdVideoSrc: PropTypes.string,
     lowerThirdVideoLoop: PropTypes.bool,
+    lowerThirdPositionCustomEnabled: PropTypes.bool,
+    lowerThirdPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     logoSrc: PropTypes.string,
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,
     logoLoop: PropTypes.bool,
+    logoPositionCustomEnabled: PropTypes.bool,
+    logoPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     fullscreenVideos: PropTypes.array,
     fullscreenVideoSelectedId: PropTypes.oneOfType([
       PropTypes.string,

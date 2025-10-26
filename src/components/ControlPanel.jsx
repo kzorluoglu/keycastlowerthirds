@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedLogo from "./AnimatedLogo.jsx";
+import DisplaySurface from "./DisplaySurface.jsx";
 
 const VIDEO_EXTENSIONS = ["webm", "mp4", "mov"];
 
@@ -62,13 +63,70 @@ const ControlPanel = ({
     () => fullscreenVideos.find((item) => item.id === state.fullscreenVideoActiveId) || null,
     [fullscreenVideos, state.fullscreenVideoActiveId]
   );
-  const fullscreenVideoIsLive = Boolean(state.fullscreenVideoVisible);
   const [activeTab, setActiveTab] = useState(tabs[0].id);
+  const fullscreenVideoIsLive = Boolean(state.fullscreenVideoVisible);
 
   const applyPatch = (patch) => {
     const next = { ...state, ...patch };
     onChange(next);
   };
+
+  const coerceNumber = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const lowerThirdOffsetXValue = state.lowerThirdPositionOffsetX ?? 0;
+  const lowerThirdOffsetYValue = state.lowerThirdPositionOffsetY ?? 0;
+  const logoOffsetXValue = state.logoPositionOffsetX ?? 0;
+  const logoOffsetYValue = state.logoPositionOffsetY ?? 0;
+  const previewViewportRef = useRef(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewState = useMemo(() => {
+    const next = { ...state };
+    const hasTextContent =
+      (state.primaryText && state.primaryText.trim().length > 0) ||
+      (state.secondaryText && state.secondaryText.trim().length > 0);
+    const hasVideoContent = Boolean(state.lowerThirdVideoSrc);
+
+    if (state.lowerThirdMode === "video" && hasVideoContent) {
+      next.visible = true;
+    } else if (state.lowerThirdMode === "text" && hasTextContent) {
+      next.visible = true;
+    }
+
+    if (!hasTextContent && !hasVideoContent) {
+      next.visible = false;
+    }
+
+    if (state.logoSrc) {
+      next.logoEnabled = true;
+    }
+
+    return next;
+  }, [state]);
+
+  useEffect(() => {
+    const element = previewViewportRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return undefined;
+
+    const updateScale = () => {
+      const { width, height } = element.getBoundingClientRect();
+      if (!width || !height) return;
+      const scaleX = width / 1920;
+      const scaleY = height / 1080;
+      const nextScale = Math.max(0.1, Math.min(scaleX, scaleY));
+      setPreviewScale(nextScale);
+    };
+
+    const observer = new ResizeObserver(() => {
+      updateScale();
+    });
+    observer.observe(element);
+    updateScale();
+
+    return () => observer.disconnect();
+  }, []);
 
   const handlePreset = (presetKey) => {
     const palette = presetThemes[presetKey];
@@ -121,6 +179,20 @@ const ControlPanel = ({
       lowerThirdVideoSrc: "",
       lowerThirdMode: "text",
       lowerThirdVideoLoop: state.lowerThirdVideoLoop ?? false
+    });
+  };
+
+  const handleLowerThirdOffsetReset = () => {
+    applyPatch({
+      lowerThirdPositionOffsetX: 0,
+      lowerThirdPositionOffsetY: 0
+    });
+  };
+
+  const handleLogoOffsetReset = () => {
+    applyPatch({
+      logoPositionOffsetX: 0,
+      logoPositionOffsetY: 0
     });
   };
 
@@ -220,6 +292,32 @@ const ControlPanel = ({
       </header>
 
       <div className="control-panel__layout">
+        <aside className="control-panel__preview">
+          <div className="preview-panel">
+            <div className="preview-panel__header">
+              <h2 className="section-title">Output Preview</h2>
+              <span className="preview-panel__meta">16:9</span>
+            </div>
+            <div
+              className="preview-panel__viewport"
+              ref={previewViewportRef}
+            >
+              <div
+                className="preview-panel__stage"
+                style={{ transform: `scale(${previewScale}) translate(-50%, -50%)` }}
+              >
+                <div className="preview-panel__surface">
+                  <DisplaySurface state={previewState} />
+                </div>
+                <div className="preview-panel__grid" aria-hidden="true" />
+              </div>
+            </div>
+            <p className="preview-panel__helper">
+              Use the grid to line up elements before sending them live.
+            </p>
+          </div>
+        </aside>
+
         <div className="control-panel__stack">
           <nav className="tab-nav" aria-label="Control sections">
             {tabs.map((tab) => (
@@ -237,9 +335,10 @@ const ControlPanel = ({
           <div className="tab-panels tab-panels--fill">
             {activeTab === "lowerthird" && (
               <div className="panel-group">
-                <section className="control-panel__section control-panel__section--grid">
+                <section className="control-panel__section">
+                  <h2 className="section-title">Content</h2>
                   <label className="field">
-                    <span className="field__label">Lower Third Content</span>
+                    <span className="field__label">Video or Text</span>
                     <select
                       className="field__input"
                       value={state.lowerThirdMode || "text"}
@@ -249,9 +348,12 @@ const ControlPanel = ({
                       <option value="video">Video Clip</option>
                     </select>
                   </label>
+                </section>
 
-                  {!lowerThirdIsVideo && (
-                    <>
+                {!lowerThirdIsVideo ? (
+                  <>
+                    <section className="control-panel__section">
+                      <h3 className="section-title">Text Type</h3>
                       <label className="field">
                         <span className="field__label">Primary Title</span>
                         <input
@@ -261,10 +363,9 @@ const ControlPanel = ({
                           onChange={(event) =>
                             applyPatch({ primaryText: event.target.value })
                           }
-                          placeholder="e.g. Live from the newsroom"
+                          placeholder="Primary headline"
                         />
                       </label>
-
                       <label className="field">
                         <span className="field__label">Secondary Title</span>
                         <input
@@ -274,10 +375,13 @@ const ControlPanel = ({
                           onChange={(event) =>
                             applyPatch({ secondaryText: event.target.value })
                           }
-                          placeholder="e.g. Updates every hour"
+                          placeholder="Supporting line"
                         />
                       </label>
+                    </section>
 
+                    <section className="control-panel__section control-panel__section--row">
+                      <h3 className="section-title">Colors</h3>
                       <div className="field field--inline">
                         <span className="field__label">Primary Background</span>
                         <input
@@ -288,7 +392,6 @@ const ControlPanel = ({
                           }
                         />
                       </div>
-
                       <div className="field field--inline">
                         <span className="field__label">Secondary Background</span>
                         <input
@@ -299,13 +402,14 @@ const ControlPanel = ({
                           }
                         />
                       </div>
-                    </>
-                  )}
-
-                  {lowerThirdIsVideo && (
+                    </section>
+                  </>
+                ) : (
+                  <section className="control-panel__section">
+                    <h3 className="section-title">Video Type</h3>
                     <div className="field">
-                      <span className="field__label">Video Clip</span>
-                      <div className="logo-controls">
+                      <span className="field__label">Clip</span>
+                      <div className="button-row">
                         <button
                           type="button"
                           className="button"
@@ -314,38 +418,45 @@ const ControlPanel = ({
                           {state.lowerThirdVideoSrc ? "Change Clip" : "Select Clip"}
                         </button>
                         {state.lowerThirdVideoSrc && (
-                          <button
-                            type="button"
-                            className="button button--ghost"
-                            onClick={handleLowerThirdVideoClear}
-                          >
-                            Remove
-                          </button>
+                          <>
+                            <span className="button-row__separator">:</span>
+                            <button
+                              type="button"
+                              className="button button--ghost"
+                              onClick={handleLowerThirdVideoClear}
+                            >
+                              Remove
+                            </button>
+                          </>
                         )}
                       </div>
-                      {state.lowerThirdVideoSrc && (
-                        <p className="section-helper">
-                          Video plays in kiosk output with audio muted.
-                        </p>
-                      )}
-                      {state.lowerThirdVideoSrc && (
-                        <label className="field">
-                          <span className="field__label">Loop Clip</span>
-                          <select
-                            className="field__input"
-                            value={state.lowerThirdVideoLoop ? "yes" : "no"}
-                            onChange={(event) =>
-                              applyPatch({
-                                lowerThirdVideoLoop: event.target.value === "yes"
-                              })
-                            }
-                          >
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                        </label>
-                      )}
                     </div>
+                    {state.lowerThirdVideoSrc && (
+                      <p className="section-helper">
+                        Video plays in kiosk output with audio muted.
+                      </p>
+                    )}
+                  </section>
+                )}
+
+                <section className="control-panel__section">
+                  <h3 className="section-title">Settings</h3>
+                  {lowerThirdIsVideo && state.lowerThirdVideoSrc && (
+                    <label className="field">
+                      <span className="field__label">Loop</span>
+                      <select
+                        className="field__input"
+                        value={state.lowerThirdVideoLoop ? "yes" : "no"}
+                        onChange={(event) =>
+                          applyPatch({
+                            lowerThirdVideoLoop: event.target.value === "yes"
+                          })
+                        }
+                      >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </label>
                   )}
 
                   <label className="field">
@@ -362,20 +473,92 @@ const ControlPanel = ({
                     </select>
                   </label>
 
-                  {logoIsVideo && (
-                    <label className="field">
-                      <span className="field__label">Logo Video Playback</span>
-                      <select
-                        className="field__input"
-                        value={state.logoLoop === false ? "once" : "loop"}
+                  <label className="field field--inline">
+                    <span className="field__label">Manual Offset</span>
+                    <span className="field__checkbox-wrapper">
+                      <input
+                        className="field__checkbox"
+                        type="checkbox"
+                        checked={Boolean(state.lowerThirdPositionCustomEnabled)}
                         onChange={(event) =>
-                          applyPatch({ logoLoop: event.target.value === "loop" })
+                          applyPatch({
+                            lowerThirdPositionCustomEnabled: event.target.checked,
+                            ...(event.target.checked
+                              ? {}
+                              : {
+                                  lowerThirdPositionOffsetX: 0,
+                                  lowerThirdPositionOffsetY: 0
+                                })
+                          })
                         }
+                      />
+                      <span className="field__checkbox-label">
+                        {state.lowerThirdPositionCustomEnabled ? "Disable" : "Enable"}
+                      </span>
+                    </span>
+                  </label>
+
+                  {state.lowerThirdPositionCustomEnabled && (
+                    <>
+                      <div className="field field--inline field--offsets">
+                        <span className="field__label">Offset (px)</span>
+                        <div className="field-offsets__group">
+                          <label className="field-offsets__item">
+                            <span className="field-offsets__label">X</span>
+                            <input
+                              className="field__input field__input--number"
+                              type="number"
+                              step="1"
+                              value={lowerThirdOffsetXValue}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                applyPatch({
+                                  lowerThirdPositionOffsetX:
+                                    nextValue === "" || nextValue === "-"
+                                      ? nextValue
+                                      : coerceNumber(nextValue)
+                                });
+                              }}
+                              onBlur={(event) =>
+                                applyPatch({
+                                  lowerThirdPositionOffsetX: coerceNumber(event.target.value)
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="field-offsets__item">
+                            <span className="field-offsets__label">Y</span>
+                            <input
+                              className="field__input field__input--number"
+                              type="number"
+                              step="1"
+                              value={lowerThirdOffsetYValue}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                applyPatch({
+                                  lowerThirdPositionOffsetY:
+                                    nextValue === "" || nextValue === "-"
+                                      ? nextValue
+                                      : coerceNumber(nextValue)
+                                });
+                              }}
+                              onBlur={(event) =>
+                                applyPatch({
+                                  lowerThirdPositionOffsetY: coerceNumber(event.target.value)
+                                })
+                              }
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="button button--ghost button--compact"
+                        onClick={handleLowerThirdOffsetReset}
                       >
-                        <option value="loop">Loop Continuously</option>
-                        <option value="once">Play Once</option>
-                      </select>
-                    </label>
+                        Reset Defaults
+                      </button>
+                    </>
                   )}
 
                   <button
@@ -387,33 +570,36 @@ const ControlPanel = ({
                   </button>
                 </section>
 
-                <section className="control-panel__section">
-                  <span className="field__label">Quick Themes</span>
-                  <div className="preset-grid">
-                    {Object.keys(presetThemes).map((key) => {
-                      const colors = presetThemes[key];
-                      const swatchStyle = {
-                        background: `linear-gradient(90deg, ${colors.primaryBg}, ${colors.secondaryBg})`
-                      };
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          className="preset-button"
-                          onClick={() => handlePreset(key)}
-                        >
-                          <span
-                            className="preset-button__swatch"
-                            style={swatchStyle}
-                          />
-                          <span className="preset-button__label">{key}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
+                {!lowerThirdIsVideo && (
+                  <section className="control-panel__section">
+                    <span className="field__label">Quick Themes</span>
+                    <div className="preset-grid">
+                      {Object.keys(presetThemes).map((key) => {
+                        const colors = presetThemes[key];
+                        const swatchStyle = {
+                          background: `linear-gradient(90deg, ${colors.primaryBg}, ${colors.secondaryBg})`
+                        };
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className="preset-button"
+                            onClick={() => handlePreset(key)}
+                          >
+                            <span
+                              className="preset-button__swatch"
+                              style={swatchStyle}
+                            />
+                            <span className="preset-button__label">{key}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
+
 
             {activeTab === "videos" && (
               <div className="panel-group">
@@ -510,11 +696,8 @@ const ControlPanel = ({
             {activeTab === "logo" && (
               <div className="panel-group">
                 <section className="control-panel__section">
-                  <h2 className="section-title">Animated Logo</h2>
-                  <p className="section-helper">
-                    Transparent GIF/APNG or alpha video (WebM, MP4, MOV) supported.
-                  </p>
-                  <div className="logo-controls">
+                  <h2 className="section-title">Select Logo</h2>
+                  <div className="button-row">
                     <button
                       type="button"
                       className="button"
@@ -523,15 +706,18 @@ const ControlPanel = ({
                       {state.logoSrc ? "Change Logo" : "Select Logo"}
                     </button>
                     {state.logoSrc && (
-                      <button
-                        type="button"
-                        className="button button--ghost"
-                        onClick={handleLogoClear}
-                      >
-                        Remove
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="button button--ghost"
+                          onClick={handleLogoClear}
+                        >
+                          Remove
+                        </button>
+                      </>
                     )}
                   </div>
+
                   {state.logoSrc && (
                     <div className="logo-preview">
                       <span className="field__label">Preview</span>
@@ -541,13 +727,19 @@ const ControlPanel = ({
                           position={state.logoPosition}
                           enabled
                           loop={state.logoLoop ?? true}
+                          logoPositionCustomEnabled={state.logoPositionCustomEnabled}
+                          logoPositionOffsetX={state.logoPositionOffsetX}
+                          logoPositionOffsetY={state.logoPositionOffsetY}
                         />
                       </div>
                     </div>
                   )}
+                </section>
 
+                <section className="control-panel__section">
+                  <h3 className="section-title">Settings</h3>
                   <label className="field">
-                    <span className="field__label">Logo Position</span>
+                    <span className="field__label">Placement</span>
                     <select
                       className="field__input"
                       value={state.logoPosition}
@@ -562,6 +754,107 @@ const ControlPanel = ({
                     </select>
                   </label>
 
+                  {logoIsVideo && (
+                    <label className="field">
+                      <span className="field__label">Loop Playback</span>
+                      <select
+                        className="field__input"
+                        value={state.logoLoop === false ? "once" : "loop"}
+                        onChange={(event) =>
+                          applyPatch({ logoLoop: event.target.value === "loop" })
+                        }
+                      >
+                        <option value="loop">Loop Continuously</option>
+                        <option value="once">Play Once</option>
+                      </select>
+                    </label>
+                  )}
+
+                  <label className="field field--inline">
+                    <span className="field__label">Manual Offset</span>
+                    <span className="field__checkbox-wrapper">
+                      <input
+                        className="field__checkbox"
+                        type="checkbox"
+                        checked={Boolean(state.logoPositionCustomEnabled)}
+                        onChange={(event) =>
+                          applyPatch({
+                            logoPositionCustomEnabled: event.target.checked,
+                            ...(event.target.checked
+                              ? {}
+                              : { logoPositionOffsetX: 0, logoPositionOffsetY: 0 })
+                          })
+                        }
+                      />
+                      <span className="field__checkbox-label">
+                        {state.logoPositionCustomEnabled ? "Disable" : "Enable"}
+                      </span>
+                    </span>
+                  </label>
+
+                  {state.logoPositionCustomEnabled && (
+                    <>
+                      <div className="field field--inline field--offsets">
+                        <span className="field__label">Offset (px)</span>
+                        <div className="field-offsets__group">
+                          <label className="field-offsets__item">
+                            <span className="field-offsets__label">X</span>
+                            <input
+                              className="field__input field__input--number"
+                              type="number"
+                              step="1"
+                              value={logoOffsetXValue}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                applyPatch({
+                                  logoPositionOffsetX:
+                                    nextValue === "" || nextValue === "-"
+                                      ? nextValue
+                                      : coerceNumber(nextValue)
+                                });
+                              }}
+                              onBlur={(event) =>
+                                applyPatch({
+                                  logoPositionOffsetX: coerceNumber(event.target.value)
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="field-offsets__item">
+                            <span className="field-offsets__label">Y</span>
+                            <input
+                              className="field__input field__input--number"
+                              type="number"
+                              step="1"
+                              value={logoOffsetYValue}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                applyPatch({
+                                  logoPositionOffsetY:
+                                    nextValue === "" || nextValue === "-"
+                                      ? nextValue
+                                      : coerceNumber(nextValue)
+                                });
+                              }}
+                              onBlur={(event) =>
+                                applyPatch({
+                                  logoPositionOffsetY: coerceNumber(event.target.value)
+                                })
+                              }
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="button button--ghost button--compact"
+                        onClick={handleLogoOffsetReset}
+                      >
+                        Reset Defaults
+                      </button>
+                    </>
+                  )}
+
                   <button
                     type="button"
                     className={`toggle-button ${state.logoEnabled ? "is-active" : ""}`}
@@ -572,6 +865,7 @@ const ControlPanel = ({
                 </section>
               </div>
             )}
+
 
             {activeTab === "system" && (
               <div className="panel-group">
@@ -640,7 +934,6 @@ const ControlPanel = ({
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -653,6 +946,9 @@ ControlPanel.propTypes = {
     primaryBg: PropTypes.string,
     secondaryBg: PropTypes.string,
     position: PropTypes.string,
+    lowerThirdPositionCustomEnabled: PropTypes.bool,
+    lowerThirdPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     visible: PropTypes.bool,
     lowerThirdMode: PropTypes.oneOf(["text", "video"]),
     lowerThirdVideoSrc: PropTypes.string,
@@ -680,6 +976,9 @@ ControlPanel.propTypes = {
     logoPosition: PropTypes.string,
     logoEnabled: PropTypes.bool,
     logoLoop: PropTypes.bool,
+    logoPositionCustomEnabled: PropTypes.bool,
+    logoPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string

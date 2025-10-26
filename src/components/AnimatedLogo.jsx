@@ -23,7 +23,13 @@ const AnimatedLogo = ({
   loop = true,
   logoPositionCustomEnabled = false,
   logoPositionOffsetX = 0,
-  logoPositionOffsetY = 0
+  logoPositionOffsetY = 0,
+  onManualDragStart,
+  onManualDragMove,
+  onManualDragEnd,
+  onManualDragCancel,
+  isDraggable = false,
+  isDragging = false
 }) => {
   const videoRef = useRef(null);
   const type = useMemo(() => inferType(src), [src]);
@@ -80,14 +86,41 @@ const AnimatedLogo = ({
   const offsetX = parseOffset(logoPositionOffsetX);
   const offsetY = parseOffset(logoPositionOffsetY);
 
-  const className = `animated-logo animated-logo--${position}`;
+  const manualDragEnabled =
+    isDraggable || typeof onManualDragStart === "function" || typeof onManualDragMove === "function";
+
+  const className = [
+    "animated-logo",
+    `animated-logo--${position}`,
+    manualDragEnabled ? "is-draggable" : "",
+    isDragging ? "is-dragging" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
   const positionStyle = logoPositionCustomEnabled
     ? { transform: `translate(${offsetX}px, ${offsetY}px)` }
     : undefined;
 
+  const dragHandlers = manualDragEnabled
+    ? {
+        onPointerDown: (event) => {
+          onManualDragStart?.(event);
+        },
+        onPointerMove: (event) => {
+          onManualDragMove?.(event);
+        },
+        onPointerUp: (event) => {
+          onManualDragEnd?.(event);
+        },
+        onPointerCancel: (event) => {
+          onManualDragCancel?.(event);
+        }
+      }
+    : {};
+
   if (type === "video") {
     return (
-      <div className={className} style={positionStyle}>
+      <div className={className} style={positionStyle} {...dragHandlers}>
         <video
           key={`${src}-${loop ? "loop" : "once"}`}
           ref={videoRef}
@@ -103,7 +136,7 @@ const AnimatedLogo = ({
   }
 
   return (
-    <div className={className} style={positionStyle}>
+    <div className={className} style={positionStyle} {...dragHandlers}>
       <img src={src} alt="Channel logo" />
     </div>
   );
@@ -121,7 +154,13 @@ AnimatedLogo.propTypes = {
   loop: PropTypes.bool,
   logoPositionCustomEnabled: PropTypes.bool,
   logoPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-  logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+  logoPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onManualDragStart: PropTypes.func,
+  onManualDragMove: PropTypes.func,
+  onManualDragEnd: PropTypes.func,
+  onManualDragCancel: PropTypes.func,
+  isDraggable: PropTypes.bool,
+  isDragging: PropTypes.bool
 };
 
 export default AnimatedLogo;

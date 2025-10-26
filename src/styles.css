@@ -222,7 +222,8 @@ body {
   width: 1920px;
   height: 1080px;
   transform-origin: top left;
-  pointer-events: none;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 .preview-panel__surface,
@@ -235,23 +236,62 @@ body {
 .preview-panel__grid {
   position: absolute;
   inset: 0;
-  pointer-events: none;
 }
 
 .preview-panel__grid {
+  pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
-    linear-gradient(to right, rgba(255, 255, 255, 0.3) 1.5px, transparent 1.5px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 1.5px, transparent 1.5px);
+    linear-gradient(to right, rgba(110, 160, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(110, 160, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(to right, rgba(132, 188, 255, 0.35) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(132, 188, 255, 0.35) 2px, transparent 2px);
   background-size: 80px 45px, 80px 45px, 320px 180px, 320px 180px;
-  opacity: 0.7;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 10px rgba(40, 90, 170, 0.35));
+}
+
+.preview-panel__grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent calc(50% - 1px),
+      rgba(200, 230, 255, 0.55) calc(50% - 1px),
+      rgba(200, 230, 255, 0.55) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(50% - 1px),
+      rgba(200, 230, 255, 0.55) calc(50% - 1px),
+      rgba(200, 230, 255, 0.55) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  pointer-events: none;
 }
 
 .preview-panel__helper {
   margin: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+.lower-third.is-draggable .lower-third__inner,
+.animated-logo.is-draggable {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.lower-third.is-dragging .lower-third__inner,
+.animated-logo.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 0 0 3px rgba(76, 154, 255, 0.55),
+    0 12px 24px rgba(10, 40, 90, 0.35);
+  filter: brightness(1.1);
 }
 
 .control-panel__section {

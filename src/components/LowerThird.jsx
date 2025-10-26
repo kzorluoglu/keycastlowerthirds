@@ -12,7 +12,13 @@ const LowerThird = ({
   lowerThirdVideoSrc = "",
   lowerThirdPositionCustomEnabled = false,
   lowerThirdPositionOffsetX = 0,
-  lowerThirdPositionOffsetY = 0
+  lowerThirdPositionOffsetY = 0,
+  onManualDragStart,
+  onManualDragMove,
+  onManualDragEnd,
+  onManualDragCancel,
+  isDraggable = false,
+  isDragging = false
 }) => {
   // Internal phase to orchestrate enter/exit animation without snapping the container
   // Phases: hidden -> entering -> active -> exiting -> hidden
@@ -80,6 +86,9 @@ const LowerThird = ({
   }
 
   const onStage = localPhase === "entering" || localPhase === "active" || localPhase === "exiting";
+  const manualDragEnabled =
+    isDraggable || typeof onManualDragStart === "function" || typeof onManualDragMove === "function";
+
   const containerClass = [
     "lower-third",
     `lower-third--${position}`,
@@ -87,7 +96,9 @@ const LowerThird = ({
     onStage ? "is-visible" : "",
     localPhase === "entering" ? "is-entering" : "",
     localPhase === "active" ? "is-active" : "",
-    localPhase === "exiting" ? "is-exiting" : ""
+    localPhase === "exiting" ? "is-exiting" : "",
+    manualDragEnabled ? "is-draggable" : "",
+    isDragging ? "is-dragging" : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -133,9 +144,26 @@ const LowerThird = ({
     </div>
   );
 
+  const dragHandlers = manualDragEnabled
+    ? {
+        onPointerDown: (event) => {
+          onManualDragStart?.(event);
+        },
+        onPointerMove: (event) => {
+          onManualDragMove?.(event);
+        },
+        onPointerUp: (event) => {
+          onManualDragEnd?.(event);
+        },
+        onPointerCancel: (event) => {
+          onManualDragCancel?.(event);
+        }
+      }
+    : {};
+
   return (
     <div className={containerClass}>
-      <div className="lower-third__inner" style={innerStyle}>
+      <div className="lower-third__inner" style={innerStyle} {...dragHandlers}>
         {content}
       </div>
     </div>
@@ -158,7 +186,13 @@ LowerThird.propTypes = {
   lowerThirdVideoSrc: PropTypes.string,
   lowerThirdPositionCustomEnabled: PropTypes.bool,
   lowerThirdPositionOffsetX: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-  lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+  lowerThirdPositionOffsetY: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onManualDragStart: PropTypes.func,
+  onManualDragMove: PropTypes.func,
+  onManualDragEnd: PropTypes.func,
+  onManualDragCancel: PropTypes.func,
+  isDraggable: PropTypes.bool,
+  isDragging: PropTypes.bool
 };
 
 export default LowerThird;

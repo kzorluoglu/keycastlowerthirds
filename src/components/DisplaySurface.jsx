@@ -109,7 +109,7 @@ FullscreenVideoOverlay.propTypes = {
   }).isRequired
 };
 
-const DisplaySurface = ({ state }) => {
+const DisplaySurface = ({ state, lowerThirdPreviewControls, logoPreviewControls }) => {
   const backgroundColor = state.backgroundColor || "#000000";
 
   return (
@@ -117,7 +117,10 @@ const DisplaySurface = ({ state }) => {
       className="display-surface"
       style={{ backgroundColor }}
     >
-      <LowerThird {...state} />
+      <LowerThird
+        {...state}
+        {...(lowerThirdPreviewControls || {})}
+      />
       <AnimatedLogo
         src={state.logoSrc}
         position={state.logoPosition}
@@ -126,6 +129,7 @@ const DisplaySurface = ({ state }) => {
         logoPositionCustomEnabled={state.logoPositionCustomEnabled}
         logoPositionOffsetX={state.logoPositionOffsetX}
         logoPositionOffsetY={state.logoPositionOffsetY}
+        {...(logoPreviewControls || {})}
       />
       <FullscreenVideoOverlay state={state} />
     </div>
@@ -169,7 +173,28 @@ DisplaySurface.propTypes = {
     displayId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
     outputActive: PropTypes.bool,
     backgroundColor: PropTypes.string
-  }).isRequired
+  }).isRequired,
+  lowerThirdPreviewControls: PropTypes.shape({
+    isDraggable: PropTypes.bool,
+    isDragging: PropTypes.bool,
+    onManualDragStart: PropTypes.func,
+    onManualDragMove: PropTypes.func,
+    onManualDragEnd: PropTypes.func,
+    onManualDragCancel: PropTypes.func
+  }),
+  logoPreviewControls: PropTypes.shape({
+    isDraggable: PropTypes.bool,
+    isDragging: PropTypes.bool,
+    onManualDragStart: PropTypes.func,
+    onManualDragMove: PropTypes.func,
+    onManualDragEnd: PropTypes.func,
+    onManualDragCancel: PropTypes.func
+  })
+};
+
+DisplaySurface.defaultProps = {
+  lowerThirdPreviewControls: undefined,
+  logoPreviewControls: undefined
 };
 
 export default DisplaySurface;

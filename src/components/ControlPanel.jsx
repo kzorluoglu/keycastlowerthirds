@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimatedLogo from "./AnimatedLogo.jsx";
 import DisplaySurface from "./DisplaySurface.jsx";
 
@@ -43,6 +43,10 @@ const tabs = [
   { id: "system", label: "System" }
 ];
 
+const GRID_SNAP_X = 80;
+const GRID_SNAP_Y = 45;
+const GRID_FINE_DIVISOR = 5;
+
 const ControlPanel = ({
   state,
   onChange,
@@ -82,6 +86,8 @@ const ControlPanel = ({
   const logoOffsetYValue = state.logoPositionOffsetY ?? 0;
   const previewViewportRef = useRef(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const dragStateRef = useRef(null);
+  const [draggingTarget, setDraggingTarget] = useState(null);
   const previewState = useMemo(() => {
     const next = { ...state };
     const hasTextContent =
@@ -127,6 +133,136 @@ const ControlPanel = ({
 
     return () => observer.disconnect();
   }, []);
+
+  const startManualDrag = useCallback(
+    (target, event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const pointerId = event.pointerId;
+      const offsets =
+        target === "lowerThird"
+          ? {
+              x: coerceNumber(state.lowerThirdPositionOffsetX),
+              y: coerceNumber(state.lowerThirdPositionOffsetY)
+            }
+          : {
+              x: coerceNumber(state.logoPositionOffsetX),
+              y: coerceNumber(state.logoPositionOffsetY)
+            };
+
+      dragStateRef.current = {
+        target,
+        pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        originX: offsets.x,
+        originY: offsets.y,
+        lastAppliedX: Math.round(offsets.x),
+        lastAppliedY: Math.round(offsets.y)
+      };
+
+      setDraggingTarget(target);
+
+      if (event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(pointerId);
+      }
+
+      if (target === "lowerThird" && !state.lowerThirdPositionCustomEnabled) {
+        applyPatch({
+          lowerThirdPositionCustomEnabled: true,
+          lowerThirdPositionOffsetX: offsets.x,
+          lowerThirdPositionOffsetY: offsets.y
+        });
+      }
+
+      if (target === "logo" && !state.logoPositionCustomEnabled) {
+        applyPatch({
+          logoPositionCustomEnabled: true,
+          logoPositionOffsetX: offsets.x,
+          logoPositionOffsetY: offsets.y
+        });
+      }
+    },
+    [
+      applyPatch,
+      coerceNumber,
+      state.lowerThirdPositionOffsetX,
+      state.lowerThirdPositionOffsetY,
+      state.lowerThirdPositionCustomEnabled,
+      state.logoPositionOffsetX,
+      state.logoPositionOffsetY,
+      state.logoPositionCustomEnabled
+    ]
+  );
+
+  const handleManualDragMove = useCallback(
+    (event) => {
+      const drag = dragStateRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+
+      event.preventDefault();
+
+      const scale = previewScale || 1;
+      const deltaX = (event.clientX - drag.startClientX) / scale;
+      const deltaY = (event.clientY - drag.startClientY) / scale;
+
+      let nextX = drag.originX + deltaX;
+      let nextY = drag.originY + deltaY;
+
+      if (!(event.altKey || event.metaKey)) {
+        const stepX = event.shiftKey ? GRID_SNAP_X / GRID_FINE_DIVISOR : GRID_SNAP_X;
+        const stepY = event.shiftKey ? GRID_SNAP_Y / GRID_FINE_DIVISOR : GRID_SNAP_Y;
+        nextX = Math.round(nextX / stepX) * stepX;
+        nextY = Math.round(nextY / stepY) * stepY;
+      }
+
+      const roundedX = Math.round(nextX);
+      const roundedY = Math.round(nextY);
+
+      if (roundedX === drag.lastAppliedX && roundedY === drag.lastAppliedY) {
+        return;
+      }
+
+      drag.lastAppliedX = roundedX;
+      drag.lastAppliedY = roundedY;
+
+      if (drag.target === "lowerThird") {
+        applyPatch({
+          lowerThirdPositionOffsetX: roundedX,
+          lowerThirdPositionOffsetY: roundedY
+        });
+      } else if (drag.target === "logo") {
+        applyPatch({
+          logoPositionOffsetX: roundedX,
+          logoPositionOffsetY: roundedY
+        });
+      }
+    },
+    [applyPatch, previewScale]
+  );
+
+  const handleManualDragEnd = useCallback(
+    (event) => {
+      const drag = dragStateRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+
+      if (event.currentTarget.releasePointerCapture) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      dragStateRef.current = null;
+      setDraggingTarget(null);
+    },
+    []
+  );
+
+  const handleManualDragCancel = useCallback(
+    (event) => {
+      handleManualDragEnd(event);
+    },
+    [handleManualDragEnd]
+  );
 
   const handlePreset = (presetKey) => {
     const palette = presetThemes[presetKey];
@@ -271,6 +407,44 @@ const ControlPanel = ({
     setActiveTab(tabId);
   };
 
+  const handleLowerThirdDragStart = useCallback(
+    (event) => {
+      startManualDrag("lowerThird", event);
+    },
+    [startManualDrag]
+  );
+
+  const handleLogoDragStart = useCallback(
+    (event) => {
+      startManualDrag("logo", event);
+    },
+    [startManualDrag]
+  );
+
+  const lowerThirdPreviewControls =
+    previewState.visible || state.lowerThirdMode === "video"
+      ? {
+          isDraggable: true,
+          isDragging: draggingTarget === "lowerThird",
+          onManualDragStart: handleLowerThirdDragStart,
+          onManualDragMove: handleManualDragMove,
+          onManualDragEnd: handleManualDragEnd,
+          onManualDragCancel: handleManualDragCancel
+        }
+      : undefined;
+
+  const logoPreviewControls =
+    previewState.logoSrc
+      ? {
+          isDraggable: true,
+          isDragging: draggingTarget === "logo",
+          onManualDragStart: handleLogoDragStart,
+          onManualDragMove: handleManualDragMove,
+          onManualDragEnd: handleManualDragEnd,
+          onManualDragCancel: handleManualDragCancel
+        }
+      : undefined;
+
   const handleOutputToggle = () => {
     if (state.outputActive) {
       onOutputStop?.();
@@ -307,7 +481,11 @@ const ControlPanel = ({
                 style={{ transform: `scale(${previewScale}) translate(-50%, -50%)` }}
               >
                 <div className="preview-panel__surface">
-                  <DisplaySurface state={previewState} />
+                  <DisplaySurface
+                    state={previewState}
+                    lowerThirdPreviewControls={lowerThirdPreviewControls}
+                    logoPreviewControls={logoPreviewControls}
+                  />
                 </div>
                 <div className="preview-panel__grid" aria-hidden="true" />
               </div>

@@ -52,6 +52,9 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 ![Logo & Lower Third Offsets](docs/screens/offset.png)
 *Offset controls for fine-tuning logo and lower third placement.*
 
+![Smart Snapping Drag Controls](docs/screens/smart-snapping.gif)
+*Drag-to-snap workflow showing grid-aligned repositioning with live offset updates.*
+
 ![Control Panel Overview Animation](docs/screens/control_panel.gif)
 *Tab navigation across Lower Third, Logo, and System sections with live preview.*
 

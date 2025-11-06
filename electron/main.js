@@ -8,6 +8,8 @@ const isDev = process.env.NODE_ENV !== "production";
 let controlWindow = null;
 /** @type {BrowserWindow | null} */
 let outputWindow = null;
+let outputWindowTransparent = false;
+let outputWindowRecreatePending = false;
 const defaultState = {
   primaryText: "Live News Update",
   secondaryText: "Breaking details go here",
@@ -169,6 +171,7 @@ const createOutputWindow = () => {
     return outputWindow;
   }
 
+  const wantsTransparent = lowerThirdState.backgroundColor === "transparent";
   outputWindow = new BrowserWindow({
     x: targetBounds.x,
     y: targetBounds.y,
@@ -180,13 +183,18 @@ const createOutputWindow = () => {
     resizable: false,
     movable: false,
     focusable: true,
-    backgroundColor: "#000000",
+    transparent: wantsTransparent,
+    backgroundColor: wantsTransparent
+      ? "#00000000"
+      : lowerThirdState.backgroundColor || "#000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
+  outputWindowTransparent = wantsTransparent;
+  outputWindowRecreatePending = false;
 
   outputWindow.setAlwaysOnTop(true, "screen-saver");
   outputWindow.setMenuBarVisibility(false);
@@ -194,6 +202,13 @@ const createOutputWindow = () => {
 
   outputWindow.on("closed", () => {
     outputWindow = null;
+    if (outputWindowRecreatePending) {
+      outputWindowRecreatePending = false;
+      if (lowerThirdState.outputActive) {
+        createOutputWindow();
+      }
+      return;
+    }
     lowerThirdState = { ...lowerThirdState, outputActive: false };
     broadcastState();
   });
@@ -204,6 +219,29 @@ const createOutputWindow = () => {
 
   lowerThirdState = { ...lowerThirdState, outputActive: true };
   broadcastState();
+};
+
+const syncOutputWindowAppearance = () => {
+  if (!outputWindow) {
+    return;
+  }
+  const wantsTransparent = lowerThirdState.backgroundColor === "transparent";
+  const targetColor = wantsTransparent
+    ? "#00000000"
+    : lowerThirdState.backgroundColor || "#000000";
+
+  if (wantsTransparent !== outputWindowTransparent) {
+    if (lowerThirdState.outputActive) {
+      outputWindowRecreatePending = true;
+      outputWindow.close();
+    } else {
+      outputWindowTransparent = wantsTransparent;
+      outputWindow.setBackgroundColor(targetColor);
+    }
+    return;
+  }
+
+  outputWindow.setBackgroundColor(targetColor);
 };
 
 const broadcastState = () => {
@@ -265,6 +303,7 @@ ipcMain.handle("lowerThird:get", () => {
 
 ipcMain.on("lowerThird:update", (_event, payload) => {
   lowerThirdState = { ...lowerThirdState, ...payload };
+  syncOutputWindowAppearance();
   broadcastState();
 });
 

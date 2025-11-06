@@ -72,6 +72,7 @@ const ControlPanel = ({
   const [activeTab, setActiveTab] = useState(tabs[0].id);
   const fullscreenVideoIsLive = Boolean(state.fullscreenVideoVisible);
   const lowerThirdHistory = Array.isArray(state.lowerThirdHistory) ? state.lowerThirdHistory : [];
+  const backgroundIsTransparent = state.backgroundColor === "transparent";
   const lowerThirdHistoryItems = useMemo(
     () =>
       [...lowerThirdHistory]
@@ -117,6 +118,14 @@ const ControlPanel = ({
       return src;
     }
   }, []);
+
+  const handleUseTransparentBackground = useCallback(() => {
+    applyPatch({ backgroundColor: "transparent" });
+  }, [applyPatch]);
+
+  const handleUseChromaGreen = useCallback(() => {
+    applyPatch({ backgroundColor: "#00FF00" });
+  }, [applyPatch]);
 
   const previewState = useMemo(() => {
     const next = { ...state };
@@ -1300,18 +1309,42 @@ const ControlPanel = ({
                 <section className="control-panel__section">
                   <h2 className="section-title">Key Color</h2>
                   <p className="section-helper">
-                    Choose the chroma color filling the output for OBS/ATEM keying.
+                    Pick a chroma fill for keying workflows or switch to a fully transparent background for OBS browser sources.
                   </p>
                   <div className="field field--inline">
                     <span className="field__label">Background Color</span>
                     <input
                       type="color"
-                      value={state.backgroundColor || "#00FF00"}
-                      onChange={(event) =>
-                        applyPatch({ backgroundColor: event.target.value })
+                      value={
+                        backgroundIsTransparent
+                          ? "#000000"
+                          : state.backgroundColor || "#00FF00"
                       }
+                      onChange={(event) => applyPatch({ backgroundColor: event.target.value })}
                     />
                   </div>
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      className="button button--compact"
+                      onClick={handleUseChromaGreen}
+                    >
+                      Use Chroma Green
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={handleUseTransparentBackground}
+                      disabled={backgroundIsTransparent}
+                    >
+                      Transparent for OBS
+                    </button>
+                  </div>
+                  {backgroundIsTransparent ? (
+                    <p className="section-helper">
+                      Output window renders with alpha—drop it into OBS as a Browser Source, no chroma key required.
+                    </p>
+                  ) : null}
                 </section>
 
                 <section className="control-panel__section">

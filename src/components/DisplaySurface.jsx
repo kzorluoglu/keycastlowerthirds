@@ -163,7 +163,36 @@ const DisplaySurface = ({
   lowerThirdPreviewControls = undefined,
   logoPreviewControls = undefined
 }) => {
-  const backgroundColor = state.backgroundColor || "#000000";
+  const backgroundColor =
+    state.backgroundColor === "transparent"
+      ? "transparent"
+      : state.backgroundColor || "#000000";
+
+  useEffect(() => {
+    if (lowerThirdPreviewControls || logoPreviewControls) {
+      return undefined;
+    }
+    const body = document.body;
+    const html = document.documentElement;
+    if (!body || !html) {
+      return undefined;
+    }
+    const previousBody = body.style.backgroundColor;
+    const previousHtml = html.style.backgroundColor;
+
+    if (state.backgroundColor === "transparent") {
+      body.style.backgroundColor = "transparent";
+      html.style.backgroundColor = "transparent";
+    } else {
+      body.style.backgroundColor = "";
+      html.style.backgroundColor = "";
+    }
+
+    return () => {
+      body.style.backgroundColor = previousBody;
+      html.style.backgroundColor = previousHtml;
+    };
+  }, [lowerThirdPreviewControls, logoPreviewControls, state.backgroundColor]);
 
   return (
     <div

@@ -122,6 +122,7 @@ Artifacts are generated via `electron-builder` inside `dist/`.
 - **Key color**: pick the chroma background (defaults to `#00FF00`).  
   - For OBS, add a Window Capture → Chroma Key filter.  
   - For ATEM, feed the fill output and key out the chroma value, or use OBS/vMix as an upstream keyer.
+- **Transparent mode**: press **Transparent for OBS** to render the kiosk with true alpha—perfect for Browser Sources.
 - **Display routing**: target any connected monitor/HDMI/SDI adapter.
 - **Output control**: start/stop the kiosk window, monitor status via pill indicator.
 
@@ -134,11 +135,11 @@ KeyCast now leans on VDO.Ninja for remote presenters.
 2. Copy the viewer link that ends with `?view=...` and paste it into the **Live Sources → Add Source** form.
 3. Use the in-app preview to verify audio/video. When you press **Take Live**, the kiosk window switches to the feed and hides any fullscreen clips.
 4. Any layout you remove is stored in history so you can bring it back with one click.
-
-Tips:
-
+2. Copy the viewer link that ends with `?view=...` and paste it into the **Live Sources -> Add Source** form.
+3. Use the in-app preview to verify audio/video. When you press **Take Live**, the kiosk window switches to the feed and hides any fullscreen clips.
+4. Any layout you remove is stored in history so you can bring it back with one click.
 - Append `&transparent=1&control=false` to viewer links for a cleaner, UI-free embed.
-- Your control machine just needs outbound HTTPS to VDO.Ninja�no local signalling server required.
+- Your control machine just needs outbound HTTPS to VDO.Ninja - no local signalling server required.
 - Use the **Hide** button to fade back to your lower third bed while keeping the remote link handy.
 
 
